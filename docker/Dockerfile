@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-ARG MPI=OFF
+ARG MPI=ON
 
 # Install deps
 RUN apt-get update && \
@@ -68,23 +68,26 @@ RUN mkdir -p /build/vtk-m && \
   /source/vtk-m-v1.5.0 . && \
   make -j4
 
-# Build stempy
-COPY . /source/stempy
+RUN apt-get update && \
+  apt-get install -y \
+  ninja-build
 
-RUN mkdir -p /build/stempy && \
+# Build stempy
+RUN cd /source && \
+  git clone --recursive https://github.com/OpenChemistry/stempy.git && \
+  mkdir -p /build/stempy && \
   cd /build/stempy && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
   -Dstempy_ENABLE_VTKm:BOOL=ON \
   -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
   -Dstempy_ENABLE_MPI:BOOL=${MPI} \
-  /source/stempy . && \
-  make -j4
+  /source/stempy -G Ninja . && \
+  ninja
 
 # Install stempy
-RUN pip3 install -r /source/stempy/requirements.txt && \
+RUN apt-get install -y build-essential libatlas-base-dev && \
+  pip3 install -r /source/stempy/requirements.txt && \
   cp -r -L /build/stempy/lib/stempy /usr/local/lib/python3.7/site-packages && \
   pip3 install matplotlib click imageio ncempy
-
-RUN rm -rf /build
 
 RUN /sbin/ldconfig
