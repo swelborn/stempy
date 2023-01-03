@@ -41,10 +41,11 @@ const Dimensions2D FRAME_DIMENSIONS = { 576, 576 };
 
 struct EofException : public std::exception
 {
-  const char* what () const throw () { return "EOF Exception"; }
+  const char* what() const throw() { return "EOF Exception"; }
 };
 
-struct Header {
+struct Header
+{
   Dimensions2D scanDimensions = { 0, 0 };
   Dimensions2D frameDimensions = { 0, 0 };
   uint32_t imagesInBlock = 0, version = 0, timestamp = 0;
@@ -65,7 +66,8 @@ struct Header {
          Dimensions2D scanDimensions, std::vector<uint32_t>& imageNumbers);
 };
 
-struct Block {
+struct Block
+{
   Header header;
   std::shared_ptr<uint16_t> data;
 
@@ -177,17 +179,18 @@ private:
   Header readHeaderVersion2();
   Header readHeaderVersion3();
 
-  template<typename T>
-  std::istream & read(T& value);
-  template<typename T>
-  std::istream & read(T* value, std::streamsize size);
+  template <typename T>
+  std::istream& read(T& value);
+  template <typename T>
+  std::istream& read(T* value, std::streamsize size);
   std::istream& skip(std::streamoff pos);
   short sector() { return m_sector; };
 };
 
 inline StreamReader::StreamReader(const std::string& path, uint8_t version)
   : StreamReader(std::vector<std::string>{ path }, version)
-{}
+{
+}
 
 class SectorStreamReader
 {
@@ -281,7 +284,8 @@ private:
 inline SectorStreamReader::SectorStreamReader(const std::string& path,
                                               uint8_t version)
   : SectorStreamReader(std::vector<std::string>{ path }, version)
-{}
+{
+}
 
 class ElectronCountedData;
 template <typename T>
@@ -315,8 +319,7 @@ public:
   {
     if (reverse) {
       return (lhs.readCount < rhs.readCount);
-    }
-    else {
+    } else {
       return (lhs.readCount > rhs.readCount);
     }
   }
@@ -367,7 +370,8 @@ private:
   // same ratio. Using a round-robin approach didn't work on some platforms.
   std::mutex m_queueMutex;
   std::priority_queue<StreamQueueEntry, std::vector<StreamQueueEntry>,
-                      StreamQueueComparison> m_streamQueue;
+                      StreamQueueComparison>
+    m_streamQueue;
 
   void initNumberOfThreads();
   bool nextStream(StreamQueueEntry& entry);
@@ -389,7 +393,6 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
   // Create worker threads
   for (int i = 0; i < m_threads; i++) {
     m_futures.emplace_back(m_pool->enqueue([this, &func]() {
-
       while (!m_streams.empty()) {
         // Get the next stream to read from
         StreamQueueEntry streamQueueEntry;
@@ -451,9 +454,9 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
         }
 
         // Return the stream to the queue so other threads can read from it.
-        // It is important that we do this before doing the processing to prevent
-        // starvation of one of the streams, we need to make sure they are all
-        // read evenly.
+        // It is important that we do this before doing the processing to
+        // prevent starvation of one of the streams, we need to make sure they
+        // are all read evenly.
         {
           std::unique_lock<std::mutex> queueLock(m_queueMutex);
           streamQueueEntry.readCount++;
@@ -522,7 +525,6 @@ private:
   uint32_t m_streamsSize = 0;
   // atomic to keep track of the header or frame being processed
   std::atomic<uint32_t> m_processed = { 0 };
-
 
   // Mutex to lock the map of frames at each scan position
   std::vector<std::unique_ptr<std::mutex>> m_scanPositionMutexes;
@@ -606,6 +608,46 @@ void SectorStreamMultiPassThreadedReader::processFrames(Functor& func,
   }
 }
 
+ScanMap SectorStreamMultiPassThreadedReader::getScanMap()
+{
+  return m_scanMap;
+}
+
+void SectorStreamMultiPassThreadedReader::createScanMap()
+{
+  m_pool = std::make_unique<ThreadPool>(m_threads);
+
+  // Read one header to get scan size
+  auto stream = m_streams[0].stream.get();
+  auto header = readHeader(*stream);
+  // Reset the stream
+  stream->seekg(0);
+
+  // Resize the vector to hold the frame sector locations for the scan
+  m_scanMapSize = header.scanDimensions.first * header.scanDimensions.second;
+  m_scanMap.clear();
+  m_scanMap.resize(m_scanMapSize);
+
+  // Allocate the mutexes
+  m_scanPositionMutexes.clear();
+  for (unsigned i = 0; i < m_scanMapSize; i++) {
+    m_scanPositionMutexes.push_back(std::make_unique<std::mutex>());
+  }
+
+  // Reset counter
+  m_processed = m_streamsOffset;
+
+  // Enqueue lambda's to read headers to build up the locations of the sectors
+  for (int i = 0; i < m_threads; i++) {
+    m_futures.emplace_back(m_pool->enqueue([this]() { readHeaders(); }));
+  }
+
+  // Wait for all files to be processed
+  for (auto& future : this->m_futures) {
+    future.get();
+  }
+}
+
 template <typename Functor>
 std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
 {
@@ -673,6 +715,6 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
 
   return complete;
 }
-}
+} // namespace stempy
 
 #endif
