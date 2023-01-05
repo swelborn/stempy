@@ -50,7 +50,8 @@ Block::Block(const Header& h)
   : header(h), data(new uint16_t[h.frameDimensions.first *
                                  h.frameDimensions.second * h.imagesInBlock],
                     std::default_delete<uint16_t[]>())
-{}
+{
+}
 
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
   : m_files(files), m_version(version)
@@ -98,13 +99,15 @@ istream& StreamReader::skip(std::streamoff offset)
   return m_stream;
 }
 
-template<typename T>
-istream & StreamReader::read(T& value){
-    return read(&value, sizeof(value));
+template <typename T>
+istream& StreamReader::read(T& value)
+{
+  return read(&value, sizeof(value));
 }
 
-template<typename T>
-istream & StreamReader::read(T* value, streamsize size){
+template <typename T>
+istream& StreamReader::read(T* value, streamsize size)
+{
 
   if (atEnd())
     throw EofException();
@@ -121,39 +124,40 @@ istream & StreamReader::read(T* value, streamsize size){
   return m_stream;
 }
 
-Header StreamReader::readHeaderVersion1() {
+Header StreamReader::readHeaderVersion1()
+{
 
   Header header;
 
   uint32_t headerData[1024];
-  read(headerData, 1024*sizeof(uint32_t));
+  read(headerData, 1024 * sizeof(uint32_t));
 
   int index = 0;
   header.imagesInBlock = headerData[index++];
   header.frameDimensions.second = headerData[index++];
   header.frameDimensions.first = headerData[index++];
   header.version = headerData[index++];
-  header.timestamp =  headerData[index++];
+  header.timestamp = headerData[index++];
   // Skip over 6 - 10 - reserved
   index += 5;
 
   // Now get the image numbers
   header.imageNumbers.resize(header.imagesInBlock);
-  copy(headerData + index,
-       headerData + index + header.imagesInBlock,
+  copy(headerData + index, headerData + index + header.imagesInBlock,
        header.imageNumbers.data());
 
   // Currently the imageNumbers seem to be 1 indexed, we hope this will change.
   // for now, convert them to 0 indexed to make the rest of the code easier.
   auto& imageNumbers = header.imageNumbers;
   for (unsigned i = 0; i < header.imagesInBlock; i++) {
-    imageNumbers[i]-= 1;
+    imageNumbers[i] -= 1;
   }
 
   return header;
 }
 
-Header StreamReader::readHeaderVersion2() {
+Header StreamReader::readHeaderVersion2()
+{
 
   Header header;
 
@@ -892,4 +896,105 @@ void SectorStreamMultiPassThreadedReader::readHeaders()
     }
   }
 }
+
+// Only creates scan map, does not process
+void SectorStreamMultiPassThreadedReader::createScanMap()
+{
+  m_pool = std::make_unique<ThreadPool>(m_threads);
+
+  // Read one header to get scan size
+  auto stream = m_streams[0].stream.get();
+  auto header = readHeader(*stream);
+  // Reset the stream
+  stream->seekg(0);
+
+  // Resize the vector to hold the frame sector locations for the scan
+  m_scanMapSize = header.scanDimensions.first * header.scanDimensions.second;
+  m_scanMap.clear();
+  m_scanMap.resize(m_scanMapSize);
+
+  // Allocate the mutexes
+  m_scanPositionMutexes.clear();
+  for (unsigned i = 0; i < m_scanMapSize; i++) {
+    m_scanPositionMutexes.push_back(std::make_unique<std::mutex>());
+  }
+
+  // Reset counter
+  m_processed = m_streamsOffset;
+
+  // Enqueue lambda's to read headers to build up the locations of the sectors
+  for (int i = 0; i < m_threads; i++) {
+    m_futures.emplace_back(m_pool->enqueue([this]() { readHeaders(); }));
+  }
+
+  // Wait for all files to be processed
+  for (auto& future : this->m_futures) {
+    future.get();
+  }
 }
+
+// After calculating the map, you can call this from python to extract
+// a block
+Block SectorStreamMultiPassThreadedReader::getBlockFromMap(uint32_t imageNumber)
+{
+  // Need to check we haven't over run
+
+  if (imageNumber >= m_scanMapOffset + m_scanMapSize) {
+    Block dummy;
+    return dummy;
+  }
+
+  // Read one header to get scan size
+  auto stream = m_streams[0].stream.get();
+  auto header = readHeader(*stream);
+  // Reset the stream
+  stream->seekg(0);
+
+  auto& frameMaps = m_scanMap[imageNumber];
+
+  // Iterate over frame maps for this scan position
+  for (const auto& f : frameMaps) {
+    auto frameNumber = f.first;
+    auto& frameMap = f.second;
+
+    Block b;
+    b.header.version = version();
+    b.header.scanNumber = header.scanNumber;
+    b.header.scanDimensions = header.scanDimensions;
+    b.header.imagesInBlock = 1;
+    b.header.frameNumber = frameNumber;
+    b.header.imageNumbers.resize(1);
+    b.header.imageNumbers[0] = imageNumber;
+    b.header.complete.resize(1);
+
+    b.header.frameDimensions = FRAME_DIMENSIONS;
+
+    b.data.reset(new uint16_t[b.header.frameDimensions.first *
+                              b.header.frameDimensions.second],
+                 std::default_delete<uint16_t[]>());
+    std::fill(b.data.get(),
+              b.data.get() + b.header.frameDimensions.first *
+                               b.header.frameDimensions.second,
+              0);
+
+    short sectors = 0;
+    for (int j = 0; j < 4; j++) {
+      auto& sectorLocation = frameMap[j];
+
+      if (sectorLocation.sectorStream != nullptr) {
+        auto sectorStream = sectorLocation.sectorStream;
+        std::unique_lock<std::mutex> lock(*sectorStream->mutex.get());
+        sectorStream->stream->seekg(sectorLocation.offset);
+        readSectorData(*sectorStream->stream, b, j);
+        sectors++;
+      }
+    }
+
+    // Mark if the frame is complete
+    b.header.complete[0] = sectors == 4;
+
+    return b;
+  }
+}
+
+} // namespace stempy
