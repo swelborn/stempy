@@ -37,8 +37,8 @@ PYBIND11_MODULE(_io, m)
           b.header.frameDimensions.first }, /* Buffer dimensions */
         { sizeof(uint16_t) * b.header.frameDimensions.second *
             b.header.frameDimensions.first,
-          sizeof(uint16_t) * b.header.frameDimensions.second,
-          sizeof(uint16_t) } /* Strides (in bytes) for each index */
+          sizeof(uint16_t) * b.header.frameDimensions.second, sizeof(uint16_t) }
+        /* Strides (in bytes) for each index */
       );
     });
 
@@ -58,8 +58,8 @@ PYBIND11_MODULE(_io, m)
           b.header.frameDimensions.first }, /* Buffer dimensions */
         { sizeof(uint16_t) * b.header.frameDimensions.second *
             b.header.frameDimensions.first,
-          sizeof(uint16_t) * b.header.frameDimensions.second,
-          sizeof(uint16_t) } /* Strides (in bytes) for each index */
+          sizeof(uint16_t) * b.header.frameDimensions.second, sizeof(uint16_t) }
+        /* Strides (in bytes) for each index */
       );
     });
 
@@ -126,5 +126,8 @@ PYBIND11_MODULE(_io, m)
     .def(py::init<const std::string&, int>(), py::arg("path"),
          py::arg("threads") = 0)
     .def(py::init<const std::vector<std::string>&, int>(), py::arg("files"),
-         py::arg("threads") = 0);
+         py::arg("threads") = 0)
+    .def("create_scan_map", &SectorStreamMultiPassThreadedReader::createScanMap)
+    .def("get_block_from_image_number",
+         &SectorStreamMultiPassThreadedReader::getBlockFromMap);
 }

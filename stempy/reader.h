@@ -514,6 +514,9 @@ public:
   SectorStreamMultiPassThreadedReader(const std::vector<std::string>& files,
                                       int threads = -1);
 
+  void createScanMap();
+  Block getBlockFromMap(uint32_t imageNumber);
+
   template <typename Functor>
   std::future<void> readAll(Functor& f);
 
@@ -605,46 +608,6 @@ void SectorStreamMultiPassThreadedReader::processFrames(Functor& func,
       // Finally process the frame
       func(b);
     }
-  }
-}
-
-ScanMap SectorStreamMultiPassThreadedReader::getScanMap()
-{
-  return m_scanMap;
-}
-
-void SectorStreamMultiPassThreadedReader::createScanMap()
-{
-  m_pool = std::make_unique<ThreadPool>(m_threads);
-
-  // Read one header to get scan size
-  auto stream = m_streams[0].stream.get();
-  auto header = readHeader(*stream);
-  // Reset the stream
-  stream->seekg(0);
-
-  // Resize the vector to hold the frame sector locations for the scan
-  m_scanMapSize = header.scanDimensions.first * header.scanDimensions.second;
-  m_scanMap.clear();
-  m_scanMap.resize(m_scanMapSize);
-
-  // Allocate the mutexes
-  m_scanPositionMutexes.clear();
-  for (unsigned i = 0; i < m_scanMapSize; i++) {
-    m_scanPositionMutexes.push_back(std::make_unique<std::mutex>());
-  }
-
-  // Reset counter
-  m_processed = m_streamsOffset;
-
-  // Enqueue lambda's to read headers to build up the locations of the sectors
-  for (int i = 0; i < m_threads; i++) {
-    m_futures.emplace_back(m_pool->enqueue([this]() { readHeaders(); }));
-  }
-
-  // Wait for all files to be processed
-  for (auto& future : this->m_futures) {
-    future.get();
   }
 }
 
