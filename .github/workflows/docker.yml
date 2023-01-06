@@ -28,4 +28,4 @@ jobs:
           context: .
           file: ./docker/Dockerfile.prereqs-cuda
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-cuda-reqsonly:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-cuda-full:latest
