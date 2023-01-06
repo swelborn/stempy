@@ -4,7 +4,12 @@ ARG MPI=ON
 # Build stempy
 WORKDIR /source
 
-RUN pip3 install -U cmake==3.25 python==3.9 numpy numba install ipykernel==6.4.2 ipympl==0.8.6 matplotlib==3.4.3 "dask[complete]" dask-cuda && \
+RUN apt-get update && \
+  apt-get install -y \
+  python3.9
+
+RUN python3.9 -m pip3 install --upgrade pip3 && \
+  python3.9 -m pip3 install -U cmake==3.25 numpy numba install ipykernel==6.4.2 ipympl==0.8.6 matplotlib==3.4.3 "dask[complete]" dask-cuda && \
   git clone --recursive https://github.com/swelborn/stempy.git && \
   mkdir -p /build/stempy && \
   cd /build/stempy && \
