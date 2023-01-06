@@ -26,6 +26,6 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: ./docker/Dockerfile.prereqs-cuda
+          file: ./docker/Dockerfile.swelborn-full
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-cuda-full:latest
