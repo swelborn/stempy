@@ -4,7 +4,7 @@ ARG MPI=ON
 # Build stempy
 WORKDIR /source
 
-RUN pip3 install -U cmake==3.25 && \
+RUN pip3 install -U cmake==3.25 python==3.9 numpy numba install ipykernel==6.4.2 ipympl==0.8.6 matplotlib==3.4.3 "dask[complete]" dask-cuda && \
   git clone --recursive https://github.com/swelborn/stempy.git && \
   mkdir -p /build/stempy && \
   cd /build/stempy && \
@@ -13,7 +13,6 @@ RUN pip3 install -U cmake==3.25 && \
   -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
   -Dstempy_ENABLE_MPI:BOOL=${MPI} \
   /source/stempy -G Ninja . && \
-  ninja && \
-  pip3 install -U ipykernel==6.4.2 ipympl==0.8.6 matplotlib==3.4.3 "dask[complete]" dask-cuda
+  ninja
 
 RUN /sbin/ldconfig
