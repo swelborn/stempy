@@ -25,7 +25,7 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v3
         with:
-          context: ./docker/
+          context: ../docker
           file: ./docker/Dockerfile.prereqs-cuda
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-cuda-reqsonly:latest
