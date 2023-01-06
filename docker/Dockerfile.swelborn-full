@@ -4,7 +4,8 @@ ARG MPI=ON
 # Build stempy
 WORKDIR /source
 
-RUN git clone --recursive https://github.com/OpenChemistry/stempy.git && \
+RUN pip3 install -U cmake==3.25 && \
+  git clone --recursive https://github.com/swelborn/stempy.git && \
   mkdir -p /build/stempy && \
   cd /build/stempy && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
