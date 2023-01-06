@@ -1,0 +1,15 @@
+FROM samwelborn/stempy-reqsonly:latest-amd64
+
+ARG MPI=ON
+# Build stempy
+RUN mkdir -p /build/stempy && \
+  cd /build/stempy && \
+  cmake -DCMAKE_BUILD_TYPE:STRING=Release \
+  -Dstempy_ENABLE_VTKm:BOOL=ON \
+  -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
+  -Dstempy_ENABLE_MPI:BOOL=${MPI} \
+  /source/stempy -G Ninja . && \
+  ninja && \
+  pip3 install -U ipykernel==6.4.2 ipympl==0.8.6 matplotlib==3.4.3
+
+RUN /sbin/ldconfig
