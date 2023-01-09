@@ -1,19 +1,20 @@
-FROM samwelborn/stempy-cuda-reqsonly:latest
+FROM samwelborn/stempy-cuda-base:latest
 
 ARG MPI=ON
+ARG VTKm=OFF
 # Build stempy
-WORKDIR /source
 
-RUN pip3 install -U cmake==3.25 ipykernel==6.4.2 ipympl==0.8.6 matplotlib==3.4.3 "dask[complete]" dask-cuda && \
+RUN cd /source && \
   git clone --recursive https://github.com/swelborn/stempy.git && \
   mkdir -p /build/stempy && \
   cd /build/stempy && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
-  -Dstempy_ENABLE_VTKm:BOOL=ON \
+  -Dstempy_ENABLE_VTKm:BOOL=${VTKm} \
   -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
   -Dstempy_ENABLE_MPI:BOOL=${MPI} \
   /source/stempy -G Ninja . && \
   ninja && \
-  cp -r -L /build/stempy/lib/stempy /usr/local/lib/python3.8/dist-packages
+  cp -r -L /build/stempy/lib/stempy /opt/miniconda3/envs/stempy/lib/python3.9/site-packages && \
+  rm -rf /source/stempy
 
 RUN /sbin/ldconfig
