@@ -4,6 +4,7 @@ ARG MPI=ON
 ARG VTKm=OFF
 # Build stempy
 RUN conda init
+SHELL ["bash", "-lc"]
 RUN conda activate stempy && \
   cd /source && \
   git clone --recursive https://github.com/swelborn/stempy.git && \
