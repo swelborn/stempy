@@ -208,7 +208,7 @@ jobs:
         with:
           context: ./docker
           load: true
-          file: ./docker/Dockerfile.stempy-cuda
+          file: ./docker/Dockerfile.stempy-cuda-test
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-cuda-test:latest
       - 
         name: run tests
