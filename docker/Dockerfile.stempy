@@ -1,4 +1,4 @@
-FROM openchemistry/stempy-base:latest
+FROM samwelborn/stempy-base:latest
 
 ARG MPI=ON
 
@@ -12,7 +12,7 @@ SHELL ["bash", "-lc"]
 # Build stempy and add mpi4py and h5py to conda env
 RUN conda activate stempy && \
   cd /source && \
-  git clone --recursive https://github.com/swelborn/stempy.git && \
+  git clone --recursive https://github.com/OpenChemistry/stempy.git && \
   mkdir -p /build/stempy && \
   cd /build/stempy && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \

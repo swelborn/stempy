@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "master"
+      - "update-dockerfile2"
 
 jobs:
   # Builds base image for stempy (no cuda) if Dockerfile.base has changed
