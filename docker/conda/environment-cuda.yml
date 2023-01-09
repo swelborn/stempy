@@ -1,0 +1,25 @@
+name: stempy
+channels:
+  - conda-forge
+  - rapidsai
+  - nvidia
+dependencies:
+  - python=3.9
+  - pip
+  - numpy
+  - deprecation
+  - dask
+  - ipykernel=6.4.2 
+  - ipympl=0.8.6
+  - matplotlib=3.4.3
+  - ucx-proc=*=gpu
+  - ucx
+  - ucx-py
+  - rmm
+  - libnuma
+  - cudatoolkit=11.7
+  - dask-cuda
+  - cupy
+  - mpi4py=3.1.4
+  - pip:
+    - cmake

@@ -1,0 +1,28 @@
+FROM samwelborn/stempy-base-cuda:latest
+
+ARG MPI=ON
+
+# Unused in base: could have option to turn this on later
+ARG VTKm=OFF 
+
+# Getting bash ready to activate
+RUN conda init
+SHELL ["bash", "-lc"]
+
+# Build stempy and add mpi4py and h5py to conda env
+RUN conda activate stempy && \
+  cd /source && \
+  git clone --recursive https://github.com/OpenChemistry/stempy.git && \
+  mkdir -p /build/stempy && \
+  cd /build/stempy && \
+  cmake -DCMAKE_BUILD_TYPE:STRING=Release \
+  -Dstempy_ENABLE_VTKm:BOOL=${VTKm} \
+  -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
+  -Dstempy_ENABLE_MPI:BOOL=${MPI} \
+  /source/stempy -G Ninja . && \
+  ninja && \
+  cp -r -L /build/stempy/lib/stempy /opt/miniconda3/envs/stempy/lib/python3.9/site-packages && \
+  rm -rf /source/stempy && \
+  mamba install -c conda-forge h5py mpi4py
+
+RUN /sbin/ldconfig

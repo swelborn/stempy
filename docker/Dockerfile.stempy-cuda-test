@@ -1,0 +1,11 @@
+FROM samwelborn/stempy-cuda:latest
+
+# Getting bash ready to activate
+RUN conda init
+SHELL ["bash", "-lc"]
+
+WORKDIR /test
+# Add pytest and requests
+RUN conda activate stempy && \
+  mamba install -c conda-forge pytest requests && \
+  git clone https://github.com/OpenChemistry/stempy.git
