@@ -7,7 +7,6 @@ ARG mpich=4.0.2
 ARG mpich_prefix=mpich-$mpich
 ARG vtkm=v1.5.0
 ARG vtkm_prefix=vtk-m-$vtkm
-ARG conda_env=stempy
 
 WORKDIR /source
 COPY ./conda/environment-dask-cuda.yml ./
@@ -47,9 +46,18 @@ RUN wget https://repo.anaconda.com/miniconda/$installer && \
     echo "source activate stempy" > ~/.bashrc
 
 # Build mpich
-RUN wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz                 && \
-    tar xvzf $mpich_prefix.tar.gz -C /build && cd /build/$mpich_prefix                      && \
-    ./configure && make -j 16 && make install && make clean && rm /source/$mpich_prefix.tar.gz
+RUN \
+    wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz && \
+    tar xvzf $mpich_prefix.tar.gz -C /build                                 && \
+    rm -rf $mpich_prefix.tar.gz                                             && \
+    cd /build/$mpich_prefix                                                 && \
+    ./configure FFLAGS=-fallow-argument-mismatch \
+    FCFLAGS=-fallow-argument-mismatch                                   && \
+    make -j 16                                                              && \
+    make install                                                            && \
+    make clean                                                              && \
+    cd ..                                                                   && \
+    rm -rf $mpich_prefix
 
 # Build VTK-m
 # RUN wget https://gitlab.kitware.com/vtk/vtk-m/-/archive/$vtkm/$vtkm_prefix.tar.gz           && \
@@ -64,22 +72,5 @@ RUN wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz     
 #     -DVTKm_ENABLE_TESTING:BOOL=OFF \
 #     /source/$vtkm_prefix .                                                                  && \
 #     make -j16
-
-ARG MPI=ON
-ARG VTKm=OFF
-# Build stempy
-
-RUN cd /source && \
-    git clone --recursive https://github.com/swelborn/stempy.git && \
-    mkdir -p /build/stempy && \
-    cd /build/stempy && \
-    cmake -DCMAKE_BUILD_TYPE:STRING=Release \
-    -Dstempy_ENABLE_VTKm:BOOL=${VTKm} \
-    -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
-    -Dstempy_ENABLE_MPI:BOOL=${MPI} \
-    /source/stempy -G Ninja . && \
-    ninja && \
-    cp -r -L /build/stempy/lib/stempy /opt/miniconda3/envs/stempy/lib/python3.9/site-packages && \
-    rm -rf /source/stempy
 
 RUN /sbin/ldconfig
