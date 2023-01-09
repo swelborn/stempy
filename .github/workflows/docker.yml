@@ -41,6 +41,7 @@ jobs:
           file: ./docker/Dockerfile.base
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-base:latest
+          
 
   Build-stempy:
     runs-on: ubuntu-latest
