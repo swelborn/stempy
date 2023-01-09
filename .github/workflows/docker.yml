@@ -109,7 +109,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-base-cuda:latest
 
-Build-stempy-cuda:
+  Build-stempy-cuda:
     runs-on: ubuntu-latest
     needs: [Build-base-cuda]
     steps:
