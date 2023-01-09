@@ -57,30 +57,6 @@ RUN \
     make install                                                            && \
     make clean                                                              && \
     cd ..                                                                   && \
-    rm -rf $mpich_prefix
-
-# RUN wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz                 && \
-#     tar xvzf $mpich_prefix.tar.gz -C /build && cd /build/$mpich_prefix                      && \
-#     ./configure && make -j 16 && make install && make clean                                 && \ 
-#     rm /source/$mpich_prefix.tar.gz && rm -rf /build/$mpich_prefix
-
-# Install mpi4py
-# RUN wget https://bitbucket.org/mpi4py/mpi4py/downloads/$mpi4py_prefix.tar.gz                && \
-#     tar xvzf $mpi4py_prefix.tar.gz -C /build && cd /build/$mpi4py_prefix                    && \
-#     python setup.py build && python setup.py install
-
-# Build VTK-m
-# RUN wget https://gitlab.kitware.com/vtk/vtk-m/-/archive/$vtkm/$vtkm_prefix.tar.gz           && \
-#     tar zxvf $vtkm_prefix.tar.gz -C /build                                                  && \
-#     rm $vtkm_prefix.tar.gz                                                                  && \
-#     mkdir -p /build/vtk-m                                                                   && \
-#     cd /build/vtk-m                                                                         && \
-#     cmake -DCMAKE_BUILD_TYPE:STRING=Release \
-#     -DBUILD_SHARED_LIBS:BOOL=OFF \
-#     -DVTKm_ENABLE_OPENMP:BOOL=ON \
-#     -DVTKm_ENABLE_RENDERING:BOOL=OFF \
-#     -DVTKm_ENABLE_TESTING:BOOL=OFF \
-#     /source/$vtkm_prefix .                                                                  && \
-#     make -j16
+    rm -rf $mpich_prefix                                                    
 
 RUN /sbin/ldconfig

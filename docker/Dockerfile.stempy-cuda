@@ -1,10 +1,15 @@
 FROM samwelborn/stempy-base-cuda:latest
 
 ARG MPI=ON
-ARG VTKm=OFF
-# Build stempy
+
+# Unused in base: could have option to turn this on later
+ARG VTKm=OFF 
+
+# Getting bash ready to activate
 RUN conda init
 SHELL ["bash", "-lc"]
+
+# Build stempy and add mpi4py and h5py to conda env
 RUN conda activate stempy && \
   cd /source && \
   git clone --recursive https://github.com/swelborn/stempy.git && \

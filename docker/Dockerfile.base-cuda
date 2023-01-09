@@ -59,18 +59,4 @@ RUN \
     cd ..                                                                   && \
     rm -rf $mpich_prefix
 
-# Build VTK-m
-# RUN wget https://gitlab.kitware.com/vtk/vtk-m/-/archive/$vtkm/$vtkm_prefix.tar.gz           && \
-#     tar zxvf $vtkm_prefix.tar.gz -C /build                                                  && \
-#     rm $vtkm_prefix.tar.gz                                                                  && \
-#     mkdir -p /build/vtk-m                                                                   && \
-#     cd /build/vtk-m                                                                         && \
-#     cmake -DCMAKE_BUILD_TYPE:STRING=Release \
-#     -DBUILD_SHARED_LIBS:BOOL=OFF \
-#     -DVTKm_ENABLE_OPENMP:BOOL=ON \
-#     -DVTKm_ENABLE_RENDERING:BOOL=OFF \
-#     -DVTKm_ENABLE_TESTING:BOOL=OFF \
-#     /source/$vtkm_prefix .                                                                  && \
-#     make -j16
-
 RUN /sbin/ldconfig
