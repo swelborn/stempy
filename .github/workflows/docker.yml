@@ -33,7 +33,9 @@ jobs:
       -
         name: Build/push Dockerfile.base
         uses: docker/build-push-action@v3
-        if: steps.changed-dockerfile-base.outputs.any_changed == 'true'
+        if: |
+          steps.changed-dockerfile-base.outputs.any_changed == 'true' ||
+          contains(github.event.head_commit.message, "trigger-all-ci")
         with:
           context: ./docker
           file: ./docker/Dockerfile.base
@@ -75,9 +77,6 @@ jobs:
       -
         name: Build/push Dockerfile.stempy
         uses: docker/build-push-action@v3
-        if: |
-          steps.changed-dockerfile-stempy.outputs.any_changed == 'true' ||
-          steps.changed-dockerfile-base.outputs.any_changed == 'true'
         with:
           context: ./docker
           file: ./docker/Dockerfile.stempy
@@ -111,7 +110,9 @@ jobs:
       -
         name: Build/push Dockerfile.base-cuda
         uses: docker/build-push-action@v3
-        if: steps.changed-dockerfile-base-cuda.outputs.any_changed == 'true'
+        if: |
+          steps.changed-dockerfile-base-cuda.outputs.any_changed == 'true' || 
+          contains(github.event.head_commit.message, "trigger-ci")
         with:
           context: ./docker
           file: ./docker/Dockerfile.base-cuda
@@ -128,20 +129,6 @@ jobs:
         with:
           fetch-depth: 0
       -
-        name: Determine if Dockerfile.base-cuda changed
-        id: changed-dockerfile-base-cuda
-        uses: tj-actions/changed-files@v35
-        with:
-          files: |
-            docker/Dockerfile.base-cuda
-      -
-        name: Determine if Dockerfile.stempy-cuda changed
-        id: changed-dockerfile-stempy-cuda
-        uses: tj-actions/changed-files@v35
-        with:
-          files: |
-            docker/Dockerfile.stempy-cuda
-      -
         name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -153,9 +140,6 @@ jobs:
       -
         name: Build/push Dockerfile.stempy-cuda
         uses: docker/build-push-action@v3
-        if: |
-          steps.changed-dockerfile-stempy-cuda.outputs.any_changed == 'true' || 
-          steps.changed-dockerfile-base-cuda.outputs.any_changed == 'true'
         with:
           context: ./docker
           file: ./docker/Dockerfile.stempy-cuda
