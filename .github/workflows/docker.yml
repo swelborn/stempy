@@ -85,8 +85,6 @@ jobs:
           file: ./docker/Dockerfile.stempy
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # Tests stempy
   test-stempy:
@@ -115,7 +113,6 @@ jobs:
           load: true
           file: ./docker/Dockerfile.stempy-test
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-test:latest
-          cache-from: type=gha
       - 
         name: run tests
         run: docker run ${{ secrets.DOCKERHUB_USERNAME }}/stempy-test:latest 
@@ -185,8 +182,6 @@ jobs:
           file: ./docker/Dockerfile.stempy-cuda
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-cuda:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # Test stempy cuda
   test-stempy-cuda:
