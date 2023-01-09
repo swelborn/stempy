@@ -3,7 +3,7 @@ FROM samwelborn/stempy-base-cuda:latest
 ARG MPI=ON
 ARG VTKm=OFF
 # Build stempy
-
+RUN conda init
 RUN conda activate stempy && \
   cd /source && \
   git clone --recursive https://github.com/swelborn/stempy.git && \
