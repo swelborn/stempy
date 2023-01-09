@@ -20,6 +20,7 @@ dependencies:
   - libnuma
   - cudatoolkit=11.7
   - dask-cuda
+  - cupy
   - mpi4py=3.1.4
   - pip:
     - cmake
