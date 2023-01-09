@@ -89,7 +89,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   # Tests stempy-cuda
-  test-stempy-cuda:
+  test-stempy:
     runs-on: ubuntu-latest
     needs: [Build-stempy]
     steps:
