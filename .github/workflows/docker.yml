@@ -35,13 +35,13 @@ jobs:
         uses: docker/build-push-action@v3
         if: |
           ${{ steps.changed-dockerfile-base.outputs.any_changed == 'true' ||
-          contains(github.event.head_commit.message, 'trigger-ci') }}
+          "contains(github.event.head_commit.message, 'trigger-ci')" }}
         with:
           context: ./docker
           file: ./docker/Dockerfile.base
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-base:latest
-          
+
 
   Build-stempy:
     runs-on: ubuntu-latest
