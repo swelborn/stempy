@@ -19,6 +19,6 @@ RUN conda activate stempy && \
   ninja && \
   cp -r -L /build/stempy/lib/stempy /opt/miniconda3/envs/stempy/lib/python3.9/site-packages && \
   rm -rf /source/stempy && \
-  mamba install h5py
+  mamba install -c conda-forge h5py mpi4py
 
 RUN /sbin/ldconfig
