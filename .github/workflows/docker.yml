@@ -112,6 +112,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./docker
+          load: true
           file: ./docker/Dockerfile.stempy-test
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-test:latest
           cache-from: type=gha
@@ -211,10 +212,9 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./docker
+          load: true
           file: ./docker/Dockerfile.stempy-cuda
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stempy-cuda-test:latest
-          cache-from: type=gha
-
       - 
         name: run tests
         run: docker run ${{ secrets.DOCKERHUB_USERNAME }}/stempy-cuda-test:latest 
