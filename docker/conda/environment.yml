@@ -11,5 +11,5 @@ dependencies:
   - ipympl=0.8.6
   - matplotlib=3.4.3
   - mpi4py=3.1.4
-  pip:
+  - pip:
     - cmake
