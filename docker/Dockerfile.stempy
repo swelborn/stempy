@@ -6,6 +6,7 @@ ARG VTKm=OFF
 RUN conda init
 SHELL ["bash", "-lc"]
 RUN conda activate stempy && \
+  mamba remove h5py && \
   cd /source && \
   git clone --recursive https://github.com/swelborn/stempy.git && \
   mkdir -p /build/stempy && \
@@ -17,6 +18,7 @@ RUN conda activate stempy && \
   /source/stempy -G Ninja . && \
   ninja && \
   cp -r -L /build/stempy/lib/stempy /opt/miniconda3/envs/stempy/lib/python3.9/site-packages && \
-  rm -rf /source/stempy
+  rm -rf /source/stempy && \
+  mamba install h5py
 
 RUN /sbin/ldconfig
