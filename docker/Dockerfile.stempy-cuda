@@ -23,6 +23,9 @@ RUN conda activate stempy && \
   ninja && \
   cp -r -L /build/stempy/lib/stempy /opt/miniconda3/envs/stempy/lib/python3.9/site-packages && \
   rm -rf /source/stempy && \
-  mamba install -c conda-forge h5py mpi4py
+  mamba install -c conda-forge h5py mpi4py && \
+  mamba install -c rapidsai -c nvidia -c conda-forge \
+  ucx-proc=*=gpu ucx ucx-py rmm libnuma cudatoolkit=11.7 \
+  dask-cuda cupy dask=2022.11.1
 
 RUN /sbin/ldconfig
