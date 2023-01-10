@@ -4,6 +4,14 @@ stempy.io package
 Submodules
 ----------
 
+stempy.io.compatibility module
+------------------------------
+
+.. automodule:: stempy.io.compatibility
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 stempy.io.sparse\_array module
 ------------------------------
 

@@ -22,6 +22,8 @@ Welcome to stempy's documentation!
 
    singularity.rst
 
+   shifter.rst
+
 Indices and tables
 ==================
 

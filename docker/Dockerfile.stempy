@@ -1,6 +1,7 @@
 FROM samwelborn/stempy-base:latest
 
 ARG MPI=ON
+WORKDIR /source
 
 # Unused in base: could have option to turn this on later
 ARG VTKm=OFF 
@@ -8,9 +9,11 @@ ARG VTKm=OFF
 # Getting bash ready to activate
 RUN conda init
 SHELL ["bash", "-lc"]
+COPY ./conda/environment.yml ./
 
 # Build stempy and add mpi4py and h5py to conda env
 RUN conda activate stempy && \
+  mamba env create -f /source/environment.yml && \
   cd /source && \
   git clone --recursive https://github.com/swelborn/stempy.git && \
   mkdir -p /build/stempy && \
@@ -22,7 +25,6 @@ RUN conda activate stempy && \
   /source/stempy -G Ninja . && \
   ninja && \
   cp -r -L /build/stempy/lib/stempy /opt/miniconda3/envs/stempy/lib/python3.9/site-packages && \
-  rm -rf /source/stempy && \
-  mamba install -c conda-forge h5py mpi4py
+  rm -rf /source/stempy
 
 RUN /sbin/ldconfig

@@ -7,8 +7,10 @@ dependencies:
   - python=3.9
   - pip
   - numpy=1.23.5
+  - numba
   - deprecation
-  - dask=2022.11.1
+  - distributed
+  - dask=2022.12.1
   - ipykernel=6.4.2 
   - ipympl=0.8.6
   - matplotlib=3.4.3

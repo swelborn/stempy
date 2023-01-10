@@ -9,7 +9,6 @@ ARG vtkm=v1.5.0
 ARG vtkm_prefix=vtk-m-$vtkm
 
 WORKDIR /source
-COPY ./conda/environment.yml ./
 
 RUN apt-get update                                      && \
     apt-get upgrade --yes                               && \
@@ -41,9 +40,7 @@ RUN apt-get update                                      && \
 RUN wget https://repo.anaconda.com/miniconda/$installer && \
     /bin/bash $installer -b -p /opt/miniconda3          && \
     rm -rf $installer                                   && \
-    conda install mamba -c conda-forge -y               && \
-    mamba env create -f /source/environment.yml         && \
-    echo "source activate stempy" > ~/.bashrc
+    conda install mamba -c conda-forge -y
 
 # Build mpich
 RUN \

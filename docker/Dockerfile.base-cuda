@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 nvidia/cuda:11.7.1-runtime-ubuntu22.04
+FROM --platform=linux/amd64 nvidia/cuda:11.7.0-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV installer=Miniconda3-py39_22.11.1-1-Linux-x86_64.sh
@@ -9,7 +9,6 @@ ARG vtkm=v1.5.0
 ARG vtkm_prefix=vtk-m-$vtkm
 
 WORKDIR /source
-COPY ./conda/environment-cuda.yml ./environment.yml
 
 RUN apt-get update                                      && \
     apt-get upgrade --yes                               && \
@@ -41,9 +40,7 @@ RUN apt-get update                                      && \
 RUN wget https://repo.anaconda.com/miniconda/$installer && \
     /bin/bash $installer -b -p /opt/miniconda3          && \
     rm -rf $installer                                   && \
-    conda install mamba -c conda-forge -y               && \
-    mamba env create -f /source/environment.yml         && \
-    echo "source activate stempy" > ~/.bashrc
+    conda install mamba -c conda-forge -y
 
 # Build mpich
 RUN \
@@ -58,5 +55,19 @@ RUN \
     make clean                                                              && \
     cd ..                                                                   && \
     rm -rf $mpich_prefix
+
+# Build VTK-m
+# RUN wget https://gitlab.kitware.com/vtk/vtk-m/-/archive/$vtkm/$vtkm_prefix.tar.gz           && \
+#     tar zxvf $vtkm_prefix.tar.gz -C /build                                                  && \
+#     rm $vtkm_prefix.tar.gz                                                                  && \
+#     mkdir -p /build/vtk-m                                                                   && \
+#     cd /build/vtk-m                                                                         && \
+#     cmake -DCMAKE_BUILD_TYPE:STRING=Release \
+#     -DBUILD_SHARED_LIBS:BOOL=OFF \
+#     -DVTKm_ENABLE_OPENMP:BOOL=ON \
+#     -DVTKm_ENABLE_RENDERING:BOOL=OFF \
+#     -DVTKm_ENABLE_TESTING:BOOL=OFF \
+#     /source/$vtkm_prefix .                                                                  && \
+#     make -j16
 
 RUN /sbin/ldconfig
