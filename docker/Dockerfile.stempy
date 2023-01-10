@@ -12,7 +12,8 @@ SHELL ["bash", "-lc"]
 COPY ./conda/environment.yml ./
 
 # Build stempy and add mpi4py and h5py to conda env
-RUN conda activate stempy && \
+RUN echo "source activate stempy" > ~/.bashrc && \
+  conda activate stempy && \
   mamba env create -f /source/environment.yml && \
   cd /source && \
   git clone --recursive https://github.com/swelborn/stempy.git && \

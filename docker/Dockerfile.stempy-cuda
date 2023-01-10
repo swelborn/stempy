@@ -12,7 +12,8 @@ WORKDIR /source
 COPY ./conda/environment-cuda.yml ./environment.yml
 
 # Build stempy and add mpi4py and h5py to conda env
-RUN conda activate stempy && \
+RUN echo "source activate stempy" > ~/.bashrc && \
+  conda activate stempy && \
   mamba env create -f /source/environment.yml && \
   cd /source && \
   git clone --recursive https://github.com/swelborn/stempy.git && \
