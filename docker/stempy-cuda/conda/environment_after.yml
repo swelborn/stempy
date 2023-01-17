@@ -1,5 +1,6 @@
+name: base
 channels:
-  - rapidsai-nightly
+  - rapidsai
   - nvidia
   - conda-forge
 dependencies:
@@ -15,14 +16,9 @@ dependencies:
   - ipympl=0.8.6
   - matplotlib=3.4.3
   - cudatoolkit=11.7 
-  - dask 
-  - distributed
-  - dask-cuda 
-  - libtool 
-  - pkg-config
-  - psutil 
-  - setuptools 
-  - authlib
+  - dask=2022.11
+  - distributed=2022.11
+  - dask-cuda=2022.12
   - pytest
   - numba
   - ucx-proc=*=gpu
@@ -31,5 +27,6 @@ dependencies:
   - rmm
   - libnuma
   - cupy
+  - libcufile=1.4.0.31 # bug requires this:https://github.com/mamba-org/mamba/issues/2167
   - pip:
     - pyzmq
