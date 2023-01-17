@@ -17,8 +17,8 @@ dependencies:
   - matplotlib=3.4.3
   - cudatoolkit=11.7 
   - dask=2022.11
-  - distributed=2022.11
-  - dask-cuda=2022.12
+  - distributed
+  - dask-cuda 
   - pytest
   - numba
   - ucx-proc=*=gpu
