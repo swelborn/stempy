@@ -1,12 +1,11 @@
-FROM nvcr.io/nvidia/cuda:11.7.1-devel-ubuntu22.04 AS base
+FROM mambaorg/micromamba:1-jammy-cuda-11.7.1 AS base
 
 ENV DEBIAN_FRONTEND noninteractive
-ENV installer=Miniconda3-py39_22.11.1-1-Linux-x86_64.sh
-ENV PATH=/opt/miniconda3/bin:$PATH
-
+ENV PATH "$MAMBA_ROOT_PREFIX/bin:$PATH"
+USER root
 WORKDIR /source
 
-RUN apt-get update                                      && \
+RUN apt-get update                                    && \
   apt-get upgrade --yes                               && \
   apt-get install --yes    \
   wget \          
@@ -31,18 +30,10 @@ RUN apt-get update                                      && \
   rm -rf /var/lib/apt/lists/*                         && \
   mkdir /build/                                       
 
-RUN wget https://repo.anaconda.com/miniconda/$installer && \
-  /bin/bash $installer -b -p /opt/miniconda3          && \
-  rm -rf $installer                                   && \
-  conda install mamba -c conda-forge -y
-
-RUN /sbin/ldconfig                                       
-
 FROM base AS stempy
 
-ENV PATH=/opt/miniconda3/bin:$PATH
 ARG PYTHON_VERSION=3.9
-COPY ./conda/** ./
+COPY --chown=$MAMBA_USER:$MAMBA_USER ./conda/** ./
 
 # Build stempy
 RUN mamba env update -n base -f /source/environment_before.yml                              && \
