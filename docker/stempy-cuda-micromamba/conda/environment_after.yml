@@ -1,6 +1,6 @@
 name: base
 channels:
-  - rapidsai-nightly
+  - rapidsai
   - nvidia
   - conda-forge
 dependencies:
@@ -16,7 +16,7 @@ dependencies:
   - ipympl=0.8.6
   - matplotlib=3.4.3
   - cudatoolkit=11.7 
-  - dask 
+  - dask=2022.12
   - distributed
   - dask-cuda 
   - pytest
