@@ -28,5 +28,7 @@ dependencies:
   - libnuma
   - cupy
   - libcufile=1.4.0.31 # bug requires this:https://github.com/mamba-org/mamba/issues/2167
+  - asyncssh # to start ssh cluster
+  - dask-jobqueue
   - pip:
     - pyzmq
