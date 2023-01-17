@@ -36,7 +36,7 @@ ARG PYTHON_VERSION=3.9
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./conda/** ./
 
 # Build stempy
-RUN mamba env update -n base -f /source/environment_before.yml                              && \
+RUN micromamba install -y -n base -f /source/environment_before.yml                         && \
   cd /source                                                                                && \
   git clone --recursive -b dask-cupy https://github.com/swelborn/stempy.git                 && \
   mkdir -p /build/stempy                                                                    && \
@@ -47,9 +47,9 @@ RUN mamba env update -n base -f /source/environment_before.yml                  
   /source/stempy .                                                                          && \
   make -j 16                                                                                && \
   cp -r -L /build/stempy/lib/stempy \                                                   
-  /opt/miniconda3/lib/python${PYTHON_VERSION}/site-packages                                 && \
+  $MAMBA_ROOT_PREFIX/lib/python${PYTHON_VERSION}/site-packages                                 && \
   rm -rf /source/stempy                                                                     && \
-  mamba env update -n base -f /source/environment_after.yml                                 && \
-  conda clean -a -y -q
+  micromamba install -y -n base -f /source/environment_after.yml                            && \
+  micromamba clean -a -y
 
 RUN /sbin/ldconfig
