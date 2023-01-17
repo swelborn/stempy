@@ -30,8 +30,6 @@ RUN apt-get update                                    && \
   rm -rf /var/lib/apt/lists/*                         && \
   mkdir /build/                                       
 
-FROM base AS stempy
-
 ARG PYTHON_VERSION=3.9
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./conda/** ./
 
@@ -47,9 +45,12 @@ RUN micromamba install -y -n base -f /source/environment_before.yml             
   /source/stempy .                                                                          && \
   make -j 16                                                                                && \
   cp -r -L /build/stempy/lib/stempy \                                                   
-  $MAMBA_ROOT_PREFIX/lib/python${PYTHON_VERSION}/site-packages                                 && \
-  rm -rf /source/stempy                                                                     && \
-  micromamba install -y -n base -f /source/environment_after.yml                            && \
+  $MAMBA_ROOT_PREFIX/lib/python${PYTHON_VERSION}/site-packages                              && \
+  rm -rf /source/stempy
+
+FROM base AS stempy
+
+RUN micromamba install -y -n base -f /source/environment_after.yml                            && \
   micromamba clean -a -y
 
 RUN /sbin/ldconfig
