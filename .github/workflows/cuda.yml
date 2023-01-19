@@ -38,7 +38,7 @@ jobs:
         name: Build/push Dockerfile
         uses: docker/build-push-action@v3
         with:
-          context: ./docker/${{ matrix.version }}
+          context: .
           file: ./docker/${{ matrix.version }}/Dockerfile
           push: true
           target: base

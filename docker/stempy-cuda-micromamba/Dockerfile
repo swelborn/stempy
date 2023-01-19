@@ -45,12 +45,12 @@ RUN micromamba install -y -n base -f /source/environment_before.yml             
   /source/stempy .                                                                          && \
   make -j 16                                                                                && \
   cp -r -L /build/stempy/lib/stempy \                                                   
-  $MAMBA_ROOT_PREFIX/lib/python${PYTHON_VERSION}/site-packages                              && \
-  rm -rf /source/stempy
+  $MAMBA_ROOT_PREFIX/lib/python${PYTHON_VERSION}/site-packages
 
 FROM base AS stempy
 
-RUN micromamba install -y -n base -f /source/environment_after.yml                            && \
-  micromamba clean -a -y
+RUN micromamba install -y -n base -f /source/environment_after.yml                          && \
+  micromamba clean -a -y                                                                    && \
+  rm -rf /source/stempy
 
 RUN /sbin/ldconfig
