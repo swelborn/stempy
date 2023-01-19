@@ -75,7 +75,6 @@ RUN conda install -c conda-forge mamba -y && \
   mamba env update -n base -f ${CONDA_ENV_DIR}/environment_before.yml                       && \
   mkdir -p /build/stempy                                                                    && \
   cd /build/stempy                                                                          && \
-  cd /build/stempy                                                                          && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
   -Dstempy_ENABLE_VTKm:BOOL=OFF \
   -Dstempy_ENABLE_MPI:BOOL=OFF \
@@ -86,7 +85,9 @@ RUN conda install -c conda-forge mamba -y && \
 
 FROM base AS stempy
 
-RUN mamba env update -n base -f ${CONDA_ENV_DIR}/environment_after.yml                                 && \
+ARG DOCKERFILE_SUBDIR=DOCKERFILE_SUBDIR
+ARG CONDA_ENV_DIR=/source/stempy/docker/${DOCKERFILE_SUBDIR}/conda
+RUN mamba env update -n base -f ${CONDA_ENV_DIR}/environment_after.yml                      && \
   rm -rf /source/stempy                                                                     && \
   conda clean -a -y -q
 
