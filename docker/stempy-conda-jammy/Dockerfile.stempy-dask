@@ -2,7 +2,6 @@ ARG DOCKERHUB_ORG=DOCKERHUB_ORG
 FROM ${DOCKERHUB_ORG}/stempy-base:latest-conda-jammy AS stempy
 
 ARG DOCKERFILE_SUBDIR=DOCKERFILE_SUBDIR
-ENV PATH=/opt/miniconda3/bin:$PATH
 ARG PYTHON_VERSION=3.9
 WORKDIR /source
 COPY . /source/stempy/
