@@ -1,4 +1,4 @@
-ame: cuda
+name: cuda
 
 on:
   push:
