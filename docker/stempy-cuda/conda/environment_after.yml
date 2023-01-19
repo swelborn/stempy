@@ -1,6 +1,6 @@
 name: base
 channels:
-  - rapidsai
+  - rapidsai-nightly
   - nvidia
   - conda-forge
 dependencies:
