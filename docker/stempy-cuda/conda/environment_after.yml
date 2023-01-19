@@ -15,6 +15,7 @@ dependencies:
   - ipykernel=6.4.2
   - ipympl=0.8.6
   - matplotlib=3.4.3
+  - jupyterlab
   - cudatoolkit=11.7 
   - dask=2022.11
   - distributed
