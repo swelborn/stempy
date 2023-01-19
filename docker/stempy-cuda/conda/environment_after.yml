@@ -18,7 +18,7 @@ dependencies:
   - cudatoolkit=11.7 
   - dask=2022.11
   - distributed
-  - dask-cuda
+  - dask-cuda 
   - pytest
   - numba
   - ucx-proc=*=gpu
