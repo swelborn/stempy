@@ -1,10 +1,10 @@
 name: base
 channels:
-  - rapidsai
+  - rapidsai-nightly
   - nvidia
   - conda-forge
 dependencies:
-  - python=3.9
+  - python=3.10
   - pip
   - numpy=1.23
   - deprecation
@@ -12,13 +12,14 @@ dependencies:
   - imageio 
   - ncempy
   - h5py=3.6
-  - ipykernel=6.4.2
-  - ipympl=0.8.6
-  - matplotlib=3.4.3
+  - ipykernel
+  - ipympl
+  - matplotlib
+  - jupyterlab
   - cudatoolkit=11.7 
   - dask=2022.11
   - distributed
-  - dask-cuda
+  - dask-cuda 
   - pytest
   - numba
   - ucx-proc=*=gpu
