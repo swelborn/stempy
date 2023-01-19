@@ -65,8 +65,6 @@ RUN set -x && \
 
 RUN /sbin/ldconfig                                       
 
-FROM base AS stempy
-
 ARG DOCKERFILE_SUBDIR=DOCKERFILE_SUBDIR
 ARG PYTHON_VERSION=3.10
 WORKDIR /source
@@ -84,8 +82,11 @@ RUN conda install -c conda-forge mamba -y && \
   /source/stempy .                                                                          && \
   make -j 16                                                                                && \
   cp -r -L /build/stempy/lib/stempy \                                                   
-  /opt/conda/lib/python${PYTHON_VERSION}/site-packages                                 && \
-  mamba env update -n base -f ${CONDA_ENV_DIR}/environment_after.yml                                 && \
+  /opt/conda/lib/python${PYTHON_VERSION}/site-packages
+
+FROM base AS stempy
+
+RUN mamba env update -n base -f ${CONDA_ENV_DIR}/environment_after.yml                                 && \
   rm -rf /source/stempy                                                                     && \
   conda clean -a -y -q
 
