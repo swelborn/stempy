@@ -84,7 +84,7 @@ RUN conda install -c conda-forge mamba -y && \
   /source/stempy .                                                                          && \
   make -j 16                                                                                && \
   cp -r -L /build/stempy/lib/stempy \                                                   
-  /opt/miniconda3/lib/python${PYTHON_VERSION}/site-packages                                 && \
+  /opt/conda/lib/python${PYTHON_VERSION}/site-packages                                 && \
   mamba env update -n base -f ${CONDA_ENV_DIR}/environment_after.yml                                 && \
   rm -rf /source/stempy                                                                     && \
   conda clean -a -y -q
