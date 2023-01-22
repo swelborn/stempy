@@ -14,12 +14,37 @@ using namespace stempy;
 PYBIND11_MODULE(_io, m)
 {
   py::class_<Header>(m, "_header")
-    .def_readonly("images_in_block", &Header::imagesInBlock)
-    .def_readonly("frame_dimensions", &Header::frameDimensions)
-    .def_readonly("version", &Header::version)
-    .def_readonly("timestamp", &Header::timestamp)
-    .def_readonly("image_numbers", &Header::imageNumbers)
-    .def_readonly("scan_dimensions", &Header::scanDimensions);
+    .def_readwrite("images_in_block", &Header::imagesInBlock)
+    .def_readwrite("frame_dimensions", &Header::frameDimensions)
+    .def_readwrite("version", &Header::version)
+    .def_readwrite("timestamp", &Header::timestamp)
+    .def_readwrite("image_numbers", &Header::imageNumbers)
+    .def_readwrite("scan_dimensions", &Header::scanDimensions)
+
+    .def(py::pickle(
+      [](Header& h) { // __getstate__
+        /* Return a tuple that fully encodes the state of the object */
+        // return py::make_tuple(h.getImagesInBlock(), h.getframeDimensions(),
+        //                       h.getVersion(), h.getTimestamp(),
+        //                       h.getImageNumbers(), h.getScanDimensions());
+        return py::make_tuple(h.imagesInBlock, h.frameDimensions, h.version,
+                              h.timestamp, h.imageNumbers, h.scanDimensions);
+      },
+      [](py::tuple t) { // __setstate__
+        if (t.size() != 6)
+          throw std::runtime_error("Invalid state!");
+
+        /* Create a new C++ instance */
+        Header h;
+        h.imagesInBlock = t[0].cast<std::uint32_t>();
+        h.frameDimensions = t[1].cast<std::pair<uint32_t, uint32_t>>();
+        h.version = t[2].cast<std::uint32_t>();
+        h.timestamp = t[3].cast<std::uint32_t>();
+        h.imageNumbers = t[4].cast<std::vector<uint32_t>>();
+        h.scanDimensions = t[5].cast<std::pair<uint32_t, uint32_t>>();
+
+        return h;
+      }));
 
   py::class_<Block>(m, "_block", py::buffer_protocol())
     .def_readonly("header", &Block::header)
@@ -41,6 +66,22 @@ PYBIND11_MODULE(_io, m)
         /* Strides (in bytes) for each index */
       );
     });
+  // .def(py::pickle(
+  //   [](const Block& b) { // __getstate__
+  //     /* Return a tuple that fully encodes the state of the object */
+  //     return py::make_tuple(b.data.get());
+  //   },
+  //   [](py::tuple t) { // __setstate__
+  //     if (t.size() != 2)
+  //       throw std::runtime_error("Invalid state!");
+
+  //     /* Create a new C++ instance */
+
+  //     Block b;
+  //     b.data.reset(t[0].cast<uint16_t*>());
+
+  //     return b;
+  //   }));
 
   py::class_<PyBlock>(m, "_pyblock", py::buffer_protocol())
     .def_readonly("header", &PyBlock::header)
