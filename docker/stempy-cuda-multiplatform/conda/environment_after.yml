@@ -4,7 +4,7 @@ channels:
   - nvidia
   - conda-forge
 dependencies:
-  - python=3.9
+  - python=3.10
   - pip
   - numpy=1.23
   - deprecation
@@ -28,5 +28,7 @@ dependencies:
   - libnuma
   - cupy
   - libcufile=1.4.0.31 # bug requires this:https://github.com/mamba-org/mamba/issues/2167
+  - pydantic
+  - jinja2
   - pip:
     - pyzmq
