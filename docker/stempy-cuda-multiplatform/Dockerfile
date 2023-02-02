@@ -33,22 +33,22 @@ ENV PATH /opt/conda/bin:$PATH
 CMD [ "/bin/bash" ]
 
 # Leave these args here to better use the Docker build cache
-ARG CONDA_VERSION=py310_22.11.1-1
+ARG CONDA_VERSION=py39_22.11.1-1
 
 RUN set -x && \
   UNAME_M="$(uname -m)" && \
   if [ "${UNAME_M}" = "x86_64" ]; then \
   MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh"; \
-  SHA256SUM="00938c3534750a0e4069499baf8f4e6dc1c2e471c86a59caa0dd03f4a9269db6"; \
+  SHA256SUM="e685005710679914a909bfb9c52183b3ccc56ad7bb84acc861d596fcbe5d28bb"; \
   elif [ "${UNAME_M}" = "s390x" ]; then \
   MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-s390x.sh"; \
-  SHA256SUM="a150511e7fd19d07b770f278fb5dd2df4bc24a8f55f06d6274774f209a36c766"; \
+  SHA256SUM="ed6176aa6b52e22d939ea5c0c38f9f3cf52d2519a5d0dcb414936287893a31f9"; \
   elif [ "${UNAME_M}" = "aarch64" ]; then \
   MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-aarch64.sh"; \
-  SHA256SUM="48a96df9ff56f7421b6dd7f9f71d548023847ba918c3826059918c08326c2017"; \
+  SHA256SUM="031b6c52060bb75e930846c0a66baa91db8196f0d97fd32f3822c54db6b7c76a"; \
   elif [ "${UNAME_M}" = "ppc64le" ]; then \
   MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-ppc64le.sh"; \
-  SHA256SUM="4c86c3383bb27b44f7059336c3a46c34922df42824577b93eadecefbf7423836"; \
+  SHA256SUM="16cc2d74644cf838d2761723c01172e0b704674317630480902ef429af29bd0b"; \
   fi && \
   wget "${MINICONDA_URL}" -O miniconda.sh -q && \
   echo "${SHA256SUM} miniconda.sh" > shasum && \
@@ -61,12 +61,13 @@ RUN set -x && \
   echo "conda activate base" >> ~/.bashrc && \
   find /opt/conda/ -follow -type f -name '*.a' -delete && \
   find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
-  /opt/conda/bin/conda clean -afy 
+  /opt/conda/bin/conda clean -afy && \
+  /opt/conda/bin/conda install -c conda-forge mamba -y 
 
 RUN /sbin/ldconfig                                       
 
 ARG DOCKERFILE_SUBDIR=DOCKERFILE_SUBDIR
-ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION=3.9
 WORKDIR /source
 COPY . /source/stempy/
 ARG CONDA_ENV_DIR=/source/stempy/docker/${DOCKERFILE_SUBDIR}/conda
