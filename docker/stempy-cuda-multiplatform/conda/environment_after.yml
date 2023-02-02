@@ -25,9 +25,9 @@ dependencies:
   - ucx
   - ucx-py
   - rmm
-  - libnuma
+  # - libnuma
   - cupy
-  - libcufile=1.4.0.31 # bug requires this:https://github.com/mamba-org/mamba/issues/2167
+  # - libcufile=1.4.0.31 # bug requires this:https://github.com/mamba-org/mamba/issues/2167
   - pydantic
   - jinja2
   - pip:
