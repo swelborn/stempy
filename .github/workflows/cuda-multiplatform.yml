@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - version: stempy-cuda
+          - version: stempy-cuda-multiplatform
       fail-fast: false
     steps:
       -
