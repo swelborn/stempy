@@ -3,7 +3,8 @@ name: cuda
 on:
   push:
     branches:
-      - "dask-cupy"
+      # - "dask-cupy"
+      - "master"
 
 jobs:
   # Builds base image for stempy of various verions if Dockerfile.base has changed

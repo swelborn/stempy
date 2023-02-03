@@ -3,7 +3,7 @@ name: cuda-multiplatform
 on:
   push:
     branches:
-      - "dask-cupy"
+      - "dask-cupy" 
 
 jobs:
   # Builds base image for stempy of various verions if Dockerfile.base has changed
