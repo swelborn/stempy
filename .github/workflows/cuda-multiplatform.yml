@@ -13,7 +13,7 @@ jobs:
       matrix:
         include:
           - version: stempy-cuda
-          - tag-suffix: -multiplatform
+            tag-suffix: -multiplatform
       fail-fast: false
     steps:
       -
