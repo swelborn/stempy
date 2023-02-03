@@ -12,7 +12,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - version: stempy-cuda-multiplatform
+          - version: stempy-cuda
+          - tag-suffix: -multiplatform
       fail-fast: false
     steps:
       -
@@ -53,11 +54,12 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: ./docker/${{ matrix.version }}/Dockerfile
+          file: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile
           push: true
           build-args: | 
                       DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
                       DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}
+          # platforms: linux/amd64,linux/arm64
           platforms: linux/amd64,linux/arm64
           target: stempy
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.version }}:latest
