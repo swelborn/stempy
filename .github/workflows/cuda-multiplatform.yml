@@ -69,5 +69,5 @@ jobs:
           # platforms: linux/amd64
           target: stempy
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.version }}:latest
-          cache_to: type=gha
+          cache-to: type=gha
           cache-from: type=gha,mode=max
