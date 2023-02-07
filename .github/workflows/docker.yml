@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "master"
+      - "update-dockerfile-staging"
   pull_request:
     branches:
       - "master"
