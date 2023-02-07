@@ -16,8 +16,6 @@ RUN mamba env update -n base -f ${CONDA_ENV_DIR}/environment_before.yml         
   -Dstempy_ENABLE_MPI:BOOL=OFF \
   /source/stempy .                                                                          && \
   make -j 16                                                                                && \
-  ls -la /opt/miniconda3/lib/ && \
-  ls -la /opt/miniconda/lib/py* && \
   cp -r -L /build/stempy/lib/stempy \                                                   
   /opt/miniconda3/lib/python${PYTHON_VERSION}/site-packages                                 && \
   mamba env update -n base -f ${CONDA_ENV_DIR}/environment_after.yml                        && \
