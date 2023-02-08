@@ -25,36 +25,17 @@ jobs:
 
     steps:
 
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - name: Dump job context
-        env:
-          JOB_CONTEXT: ${{ toJson(job) }}
-        run: echo "$JOB_CONTEXT"
-      - name: Dump steps context
-        env:
-          STEPS_CONTEXT: ${{ toJson(steps) }}
-        run: echo "$STEPS_CONTEXT"
-      - name: Dump runner context
-        env:
-          RUNNER_CONTEXT: ${{ toJson(runner) }}
-        run: echo "$RUNNER_CONTEXT"
-      - name: Dump strategy context
-        env:
-          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
-        run: echo "$STRATEGY_CONTEXT"
-      - name: Dump matrix context
-        env:
-          MATRIX_CONTEXT: ${{ toJson(matrix) }}
-        run: echo "$MATRIX_CONTEXT"
-      - name: Dump vars context
-        env:
-          VARS_CONTEXT: ${{ toJson(vars) }}
-        run: echo "$VARS_CONTEXT"
+      - 
+        name: Sets DOCKERHUB_ORG if pushing to fork
+          run: |
+            echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
+          if: ${{ github.event_name != 'pull_request' }}
 
-
+      - 
+        name: Sets DOCKERHUB_ORG if  PR
+          run: |
+            echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
+          if: ${{ github.event_name == 'pull_request' }}
       -
         name: Checkout
         uses: actions/checkout@v3
@@ -88,7 +69,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           build-args: | 
                       DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
-          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}-base:latest${{ matrix.tag-suffix }}
+          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}-base:latest${{ matrix.tag-suffix }}
           cache-to: type=gha
           cache-from: type=gha,mode=max
 
@@ -118,6 +99,17 @@ jobs:
         with:
           fetch-depth: 0
           submodules: 'recursive'
+      - 
+        name: Sets DOCKERHUB_ORG if pushing to fork
+          run: |
+            echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
+          if: ${{ github.event_name != 'pull_request' }}
+
+      - 
+        name: Sets DOCKERHUB_ORG if  PR
+          run: |
+            echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
+          if: ${{ github.event_name == 'pull_request' }}
       -
         name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -135,9 +127,9 @@ jobs:
           file: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.stempy${{matrix.notebook}}
           build-args: | 
                       DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
-                      DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}
+                      DOCKERHUB_ORG=${{ env.DOCKERHUB_ORG }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}${{matrix.notebook}}:latest${{ matrix.tag-suffix}}
+          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}${{matrix.notebook}}:latest${{ matrix.tag-suffix}}
 
   # Seperate job for building original version
   build-stempy-old:
@@ -156,6 +148,17 @@ jobs:
         with:
           fetch-depth: 0
           submodules: 'recursive'
+      - 
+        name: Sets DOCKERHUB_ORG if pushing to fork
+          run: |
+            echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
+          if: ${{ github.event_name != 'pull_request' }}
+
+      - 
+        name: Sets DOCKERHUB_ORG if  PR
+          run: |
+            echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
+          if: ${{ github.event_name == 'pull_request' }}
       -
         name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -174,7 +177,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}:latest
+          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}:latest
           build-args: |
                       MPI=${{ matrix.MPI }}
           cache-to: type=gha
@@ -188,4 +191,4 @@ jobs:
           context: .
           file: ./docker/Dockerfile.ipykernel
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}-ipykernel:latest
+          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}-ipykernel:latest
