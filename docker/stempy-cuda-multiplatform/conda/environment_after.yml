@@ -30,5 +30,9 @@ dependencies:
   # - libcufile=1.4.0.31 # bug requires this:https://github.com/mamba-org/mamba/issues/2167
   - pydantic
   - jinja2
+  - tenacity
+  - aiohttp
+  - httpx
+  - aiopath
   - pip:
     - pyzmq
