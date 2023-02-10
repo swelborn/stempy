@@ -50,8 +50,8 @@ jobs:
           build-args: | 
                       DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
                       DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}
-          platforms: linux/amd64,linux/arm64
-          # platforms: linux/amd64
+          # platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           target: stempy
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.version }}:latest
           cache-to: type=gha
