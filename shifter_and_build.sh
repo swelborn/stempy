@@ -1,5 +1,5 @@
 #! /bin/bash
 
-MPI=ON 
+MPI=OFF 
 
-shifter --image=samwelborn/stempy-mpi:latest-amd64 --volume="/global/homes/s/swelborn/stempy:/source/stempy/" /source/stempy/conf_and_build.sh
+shifter --image=samwelborn/stempy-cuda --volume="/global/homes/s/swelborn/stempy_swelborn:/source/stempy/" /source/stempy/conf_and_build.sh

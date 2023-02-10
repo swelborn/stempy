@@ -6,6 +6,6 @@
         "{resource_dir}/kernel_helper_inside.sh",
         "{connection_file}"
     ],
-    "display_name": "stempy-cuda",
+    "display_name": "stempy-dask",
     "language": "python"
 }

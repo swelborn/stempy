@@ -1,0 +1,43 @@
+# Start GPU workers
+
+echo "Starting workers"
+{% include "dask_env.j2" %}
+srun shifter dask-cuda-worker \
+    --scheduler-file {{dask_settings.scheduler_file_path}} \
+    --preload stempy_dask.preload_serializers \
+    --name GPU_${SLURMD_NODENAME} \ 
+    --interface hsn0 \
+    --rmm-pool-size 38GB \
+    --rmm-log-directory "{{dask_settings.workdir}}/rmm-logs/" \
+    --rmm-track-allocations True \
+    --protocol "tcp" \
+
+{# # Each worker uses all GPUs on its node
+
+
+# Start one worker per node in the allocation (one process started per GPU) - I think this needs to be changed.
+echo "Starting Workers..."
+for HOST in `scontrol show hostnames "$SLURM_JOB_NODELIST"`; do
+  mkdir -p $JOB_OUTPUT_DIR/$HOST
+  sleep 1
+
+  if [ $HOST == $_HOST ]; then
+    echo "Running worker on Head Node..."
+    {% include "dask_env.j2" %}
+    dask-cuda-worker \
+      --rmm-pool-size 38GB \
+      --interface hsn0 \
+      --local-directory $JOB_OUTPUT_DIR/$HOST \
+      --scheduler-file $scheduler_file &
+  else
+    {% include "dask_env.j2" %}
+    srun shifter -N 1 -n 1 -w "$HOST" dask-cuda-worker \
+      --rmm-pool-size 38GB \
+      --local-directory $JOB_OUTPUT_DIR/$HOST \
+      --interface hsn0 \
+      --scheduler-file $scheduler_file &
+  fi
+
+done
+# Wait for the workers to start
+sleep 10 #}

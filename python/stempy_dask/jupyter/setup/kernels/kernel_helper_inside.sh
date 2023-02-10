@@ -1,5 +1,5 @@
 #!/bin/bash
 
-PATH=/global/homes/s/swelborn/utility/container_proxy/:$PATH
+PATH=${HOME}/.local/share/jupyter/kernels/stempy-dask/:$PATH
 python -m ipykernel_launcher -f $1
 exec "$@"

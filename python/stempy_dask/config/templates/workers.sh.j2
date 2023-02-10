@@ -1,0 +1,26 @@
+#!/bin/bash
+
+cd /source/stempy/python
+export PYTHONPATH=$PYTHONPATH:$PWD
+
+dask-cuda-worker \
+    --scheduler-file {{dask_settings.scheduler_file_path}} \
+    --preload stempy_dask.preload_serializers \
+    --name GPU_${SLURMD_NODENAME} \ 
+    --interface hsn0 \
+    --rmm-pool-size 38GB \
+    --rmm-log-directory "{{dask_settings.workdir}}/rmm-logs/" \
+    --rmm-track-allocations True \
+    --protocol "tcp" \
+
+
+# dask worker \
+# --scheduler-file $SCHEDULER_FILE \
+# --name IO_${SLURMD_NODENAME} \
+# --interface hsn0 \
+# --preload $PRELOAD_FILE \
+# --protocol "tcp" \
+# --nworkers 16 \
+# --nthreads 1
+
+{# --preload {{dask_settings.preload_file_path}} \ #}

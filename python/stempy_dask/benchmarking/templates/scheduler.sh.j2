@@ -1,0 +1,25 @@
+# Start a single scheduler on node 0 of the allocation
+echo "Starting scheduler..."
+
+{% include "dask_env.j2" %}
+dask scheduler \
+--protocol {{settings.DASK_PROTOCOL}} \
+--interface {{settings.DASK_INTERFACE}} \
+--no-dashboard \
+--scheduler-file $scheduler_file \
+--preload $preload_file \
+--preload dask_cuda.initialize &
+
+# Wait for the scheduler to start
+sleep 2
+until [ -f $scheduler_file ]
+do
+     sleep 2
+done
+
+echo "Scheduler file found"
+SCHED_ADDR="$(python -c "
+import json
+with open('$scheduler_file') as f:
+  print(json.load(f)['address'])
+")"
