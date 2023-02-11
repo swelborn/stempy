@@ -37,3 +37,4 @@ dependencies:
   - pip:
     - pyzmq
     - orjson
+    - cmake

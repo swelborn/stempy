@@ -5,7 +5,7 @@ WORKDIR /source
 
 RUN apt-get update                                      && \
   apt-get upgrade --yes                               && \
-  apt-get install --yes    \
+  apt-get --no-install-recommends install --yes \
   wget \          
   libeigen3-dev \
   git \
@@ -15,6 +15,7 @@ RUN apt-get update                                      && \
   g++ \
   make \
   gfortran \
+  cmake \
   zlib1g-dev \
   libffi-dev \
   apt-transport-https \
@@ -23,7 +24,6 @@ RUN apt-get update                                      && \
   software-properties-common \
   libhdf5-dev \
   build-essential                                     && \
-  apt-get clean all                                   && \
   apt-get clean all                                   && \
   rm -rf /var/lib/apt/lists/*                         && \
   mkdir /build/                                       
@@ -66,15 +66,12 @@ RUN set -x && \
 
 RUN /sbin/ldconfig                                       
 
-ARG DOCKERFILE_SUBDIR=DOCKERFILE_SUBDIR
 ARG PYTHON_VERSION=3.9
 WORKDIR /source
 COPY . /source/stempy/
 ARG CONDA_ENV_DIR=/source/stempy/docker/${DOCKERFILE_SUBDIR}/conda
 
-RUN conda install -c conda-forge mamba -y && \
-  mamba env update -n base -f ${CONDA_ENV_DIR}/environment_before.yml                       && \
-  mkdir -p /build/stempy                                                                    && \
+RUN mkdir -p /build/stempy                                                                    && \
   cd /build/stempy                                                                          && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
   -Dstempy_ENABLE_VTKm:BOOL=OFF \
@@ -88,7 +85,7 @@ FROM base AS stempy
 
 ARG DOCKERFILE_SUBDIR=DOCKERFILE_SUBDIR
 ARG CONDA_ENV_DIR=/source/stempy/docker/${DOCKERFILE_SUBDIR}/conda
-RUN mamba env update -n base -f ${CONDA_ENV_DIR}/environment_after.yml                      && \
+RUN mamba env update -n base -f ${CONDA_ENV_DIR}/environment.yml                            && \
   rm -rf /source/stempy                                                                     && \
   conda clean -a -y -q
 

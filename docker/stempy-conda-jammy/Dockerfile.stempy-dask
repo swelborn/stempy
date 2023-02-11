@@ -16,7 +16,7 @@ RUN mamba env update -n base -f ${CONDA_ENV_DIR}/environment_before.yml         
   /source/stempy .                                                                          && \
   make -j 16                                                                                && \
   cp -r -L /build/stempy/lib/stempy \                                                   
-  /opt/conda/lib/python${PYTHON_VERSION}/site-packages                                 && \
+  /opt/conda/lib/python${PYTHON_VERSION}/site-packages                                      && \
   mamba env update -n base -f ${CONDA_ENV_DIR}/environment_dask.yml                         && \
   rm -rf /source/stempy                                                                     && \
   conda clean -a -y -q
