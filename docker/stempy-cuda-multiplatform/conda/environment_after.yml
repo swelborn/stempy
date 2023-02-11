@@ -33,7 +33,7 @@ dependencies:
   - tenacity
   - aiohttp
   - httpx
-  - aiopath
   - pip:
     - pyzmq
     - orjson
+    - aiopath
