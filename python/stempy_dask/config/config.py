@@ -114,15 +114,6 @@ class System(BaseSettings):
     USER: str
     SCRATCH: Optional[Path]
 
-    @validator("system", pre=True, always=True)
-    def _determine_system(cls, v):
-        try:
-            v = os.environ["NERSC_HOST"]
-        except KeyError:
-            v = "local"
-            return v
-        return v
-
     class Config:
         case_sensitive = True
         env_file = ".env"
@@ -167,6 +158,8 @@ if interpreter.jupyter and system.system == "perlmutter":
         slurm_settings=slurm_settings,
         shifter_settings=shifter_settings,
     )
+    log = pretty_logger.create_logger("config", settings)
+
 elif system.system == "perlmutter":
     slurm_settings = SlurmGPUSettings()
     shifter_settings = ShifterSettings()
@@ -176,7 +169,4 @@ elif system.system == "perlmutter":
         slurm_settings=slurm_settings,
         shifter_settings=shifter_settings,
     )
-else:
-    settings = Settings(interpreter=interpreter, system_settings=system)
-
-log = pretty_logger.create_logger("config", settings)
+    log = pretty_logger.create_logger("config", settings)

@@ -1,10 +1,9 @@
-# Start a single scheduler on node 0 of the allocation
 echo "Starting scheduler..."
 
 {% include "dask_env.j2" %}
 dask scheduler \
---protocol {{settings.DASK_PROTOCOL}} \
---interface {{settings.DASK_INTERFACE}} \
+--protocol tcp \
+--interface hsn0 \
 --no-dashboard \
 --scheduler-file $scheduler_file \
 --preload $preload_file \

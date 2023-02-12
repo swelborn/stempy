@@ -12,24 +12,20 @@
 #SBATCH --constraint={{machine.constraint}}
 #SBATCH --nodes={{machine.nodes}}
 #SBATCH --ntasks={{machine.ntasks}}
-{% if machine.gpus_per_task %}
-#SBATCH --gpus-per-task={{machine.gpus_per_task}}
-{% endif %}
-#SBATCH --time=00:30:00
+#SBATCH --time=00:01:00
 #SBATCH --job-name=distiller-{{job.job_type}}-{{job.id}}
 #SBATCH --exclusive
 #SBATCH --account={{machine.account}}
 {% if machine.balance_bridge %}
 #SBATCH --balance_bridge={{machine.balance_bridge}}
 {% endif %}
-#SBATCH --chdir={{settings.JOB_SCRIPT_DIRECTORY}}/{{job.id}}
 {% if machine.reservation %}
 #SBATCH --reservation={{machine.reservation}}
 {% endif %}
-{% if settings.shifter_settings.SHIFTER_IMAGEREQUEST %}
-#SBATCH --image={{settings.shifter_settings.SHIFTER_IMAGEREQUEST}}
+{% if machine.image %}
+#SBATCH --image={{machine.image}}
 {% else %}
-#SBATCH --image=samwelborn/stempy-cuda:latest
+#SBATCH --image=openchemistry/stempy-mpi:latest
 {% endif %}
 {% if machine.volume %}
 #SBATCH --volume="{{machine.volume}}"

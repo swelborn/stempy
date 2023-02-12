@@ -8,6 +8,7 @@ from pydantic import BaseModel
 class JobType(str, Enum):
     TRANSFER = "transfer"
     COUNT = "count"
+    DASK = "dask"
 
     def __str__(self) -> str:
         return self.value

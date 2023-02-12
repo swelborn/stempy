@@ -5,18 +5,17 @@ from pathlib import Path
 from time import perf_counter
 
 import cupy as cp
-import dask.array as da
 import distributed
 import numpy as np
+import stempy.image as stim
+import stempy.io as stio
 from distributed import as_completed, wait
 from pydantic import BaseModel
+
+import dask.array as da
 from stempy_dask.config import config as cfg
 from stempy_dask.utils import log as pretty_logger
 
-import stempy.image as stim
-import stempy.io as stio
-
-from .constants import StempyDataInfo
 from .dask import DaskClient
 from .kernels import kernels
 

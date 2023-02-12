@@ -3,9 +3,8 @@ import copyreg
 import sys
 
 import numpy as np
-from distributed.protocol import register_generic
-
 import stempy._io
+from distributed.protocol import register_generic
 
 
 class DBlock:

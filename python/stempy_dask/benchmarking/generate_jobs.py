@@ -1,104 +1,116 @@
-import asyncio
-import copy
-import json
-import logging
-from datetime import datetime, timedelta
-from enum import Enum
+import itertools
+import time
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Iterator, List, Tuple
 
-import aiohttp
-import httpx
 import jinja2
-import tenacity
-from aiopath import AsyncPath
-from authlib.integrations.httpx_client.oauth2_client import AsyncOAuth2Client
-from authlib.jose import JsonWebKey
-from authlib.oauth2.rfc7523 import PrivateKeyJWT
-from config import settings
-from constants import COUNT_JOB_SCRIPT_TEMPLATE
-from dotenv import dotenv_values
-from schemas import JobUpdate
-from schemas import Location as LocationRest
-from schemas import Machine, Scan, ScanUpdate, SfapiJob
-from utils import get_job
-from utils import get_machine
-from utils import get_machine as fetch_machine
-from utils import get_machines as fetch_machines
-from utils import get_scan
-from utils import update_job as update_job_request
-from utils import update_scan
+import numpy as np
 
-# Cache to store machines, we only need to fetch them once
-_machines = None
+from .constants import (
+    BENCHMARK_WORKDIR,
+    BIG_DATA_BENCHMARK,
+    DASK_COUNT_JOB_SCRIPT_TEMPLATE,
+    DASK_PERLMUTTER_MACHINE_CONSTANTS,
+    SMALL_DATA_BENCHMARK,
+    StempyDataInfo,
+)
+from .schemas import BenchmarkMatrix, BenchmarkVariable, DaskMachine, Job, JobType
 
 
-async def render_job_script(
-    scan: Scan, job: Job, machine: Machine, dest_dir: str, machine_names: List[str]
-) -> str:
+def mock_job(
+    machine: DaskMachine, data: StempyDataInfo, id_generator: Iterator[int]
+) -> Job:
+    id = next(id_generator)
+    job_type = JobType.DASK
+    scan_id = data.scan_number
+    machine_name = machine.name
+    params = {"hello": 123}
 
-    template_name = COUNT_JOB_SCRIPT_TEMPLATE
+    return Job(
+        id=id, job_type=job_type, scan_id=scan_id, machine=machine_name, params=params
+    )  # type: ignore
+
+
+# Create benchmark machines
+def create_benchmark_dask_machines(
+    matrix: BenchmarkMatrix,
+) -> List[DaskMachine]:
+    machines = []
+    prefix = matrix.ts.strftime("%Y%m%d_%H%M%S")
+    suffix = "-".join(matrix.variables)
+    for nodes in matrix.nodes:
+        machine = DaskMachine(nodes=nodes, **DASK_PERLMUTTER_MACHINE_CONSTANTS)
+        machine.workdir = machine.workdir / f"{prefix}-{suffix}"
+        machines.append(machine)
+
+    return machines
+
+
+# Render job script
+def render_dask_job_script(
+    machine: DaskMachine, data: StempyDataInfo, id_generator: Iterator[int]
+) -> Tuple[Job, str]:
+
+    template_name = DASK_COUNT_JOB_SCRIPT_TEMPLATE
     template_loader = jinja2.FileSystemLoader(
         searchpath=Path(__file__).parent / "templates"
     )
-    template_env = jinja2.Environment(loader=template_loader, enable_async=True)
+    template_env = jinja2.Environment(loader=template_loader)
     template = template_env.get_template(template_name)
-
-    # Make a copy and filter out machines from locations
-    scan = copy.deepcopy(scan)
-    scan.locations = [x for x in scan.locations if x.host not in machine_names]
-
-    try:
-        output = await template.render_async(
-            settings=settings,
-            scan=scan,
-            dest_dir=dest_dir,
-            job=job,
-            machine=machine,
-            **job.params,
-        )
-    except:
-        logger.exception("Exception rendering job script.")
-        raise
-
-    return output
+    job = mock_job(machine, data, id_generator)
+    if not machine.workdir.exists():
+        machine.workdir.mkdir()
+    machine.workdir = machine.workdir / f"{machine.nodes}node-{data.name}data"
+    if not machine.workdir.exists():
+        machine.workdir.mkdir()
+    output = template.render(
+        machine=machine,
+        data=data,
+        job=job,
+    )
+    return (job, output)
 
 
-async def submit_job(machine: str, batch_submit_file: str) -> int:
-    data = {"job": batch_submit_file, "isPath": True}
+def write_scripts_into_folders(
+    scripts: List[Tuple[DaskMachine, StempyDataInfo, Tuple[Job, str]]]
+):
+    for script in scripts:
+        machine = script[0]
+        data = script[1]
+        job = script[2][0]
+        run_script = script[2][1]
+        workdir: Path = machine.workdir
+        with open(workdir / "run.sh", "w") as f:
+            f.write(run_script)
+        with open(workdir / "machine.json", "w") as f:
+            f.write(machine.json())
+        with open(workdir / "data.json", "w") as f:
+            f.write(data.json())
+        with open(workdir / "job.json", "w") as f:
+            f.write(job.json())
 
-    r = await sfapi_post(f"compute/jobs/{machine}", data)
-    r.raise_for_status()
 
-    sfapi_response = r.json()
-    if sfapi_response["status"].lower() != "ok":
-        raise SfApiError(sfapi_response["error"])
+if __name__ == "__main__":
+    # Configure benchmark variables
+    nodes = [1, 2, 4, 8]
+    data = [BIG_DATA_BENCHMARK, SMALL_DATA_BENCHMARK]
+    benchmark_variables = [BenchmarkVariable.NODES, BenchmarkVariable.DATA]
 
-    task_id = sfapi_response["task_id"]
+    # Create matrix using those variables
+    matrix = BenchmarkMatrix(
+        nodes=nodes,
+        data=data,
+        variables=benchmark_variables,
+    )
+    id_generator: Iterator[int] = itertools.count()  # for generating mock IDs
+    machines = create_benchmark_dask_machines(matrix)
+    scripts = []
 
-    # We now need to poll waiting for the task to complete!
-    while True:
-        r = await sfapi_get(f"tasks/{task_id}")
-        r.raise_for_status()
+    for machine in machines:
+        for d in data:
+            scripts.append(
+                (machine, d, render_dask_job_script(machine, d, id_generator))
+            )
 
-        sfapi_response = r.json()
-
-        if sfapi_response["status"].lower() == "error":
-            raise SfApiError(sfapi_response["error"])
-
-        logger.info(sfapi_response)
-
-        if sfapi_response.get("result") is None:
-            await asyncio.sleep(1)
-            continue
-
-        results = json.loads(sfapi_response["result"])
-
-        if results["status"].lower() == "error":
-            raise SfApiError(results["error"])
-
-        slurm_id = results.get("jobid")
-        if slurm_id is None:
-            raise SfApiError(f"Unable to extract slurm job if for task: {task_id}")
-
-        return int(slurm_id)
+    write_scripts_into_folders(scripts)

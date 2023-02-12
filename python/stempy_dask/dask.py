@@ -7,9 +7,10 @@ from threading import Thread
 from typing import Union
 
 import cupy as cp
-import dask
 import jinja2
 import rmm
+
+import dask
 from dask.distributed import Client
 from stempy_dask.config import config as cfg
 from stempy_dask.config.config import Settings

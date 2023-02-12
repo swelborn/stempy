@@ -1,0 +1,14 @@
+echo "Starting workers"
+
+{% include "dask_env.j2" %}
+srun shifter dask-cuda-worker \
+    --scheduler-file $scheduler_file \
+    --preload stempy_dask.preload_serializers \
+    --name GPU_${SLURMD_NODENAME} \ 
+    --interface hsn0 \
+    --rmm-pool-size 38GB \
+    --rmm-log-directory "{{dask_settings.workdir}}/rmm-logs/" \
+    --rmm-track-allocations True \
+    --protocol tcp &
+
+    

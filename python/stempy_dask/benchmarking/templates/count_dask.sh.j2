@@ -1,4 +1,4 @@
-{% include "header.j2"  %}
+{% include "0_header.j2"  %}
 
 # Much taken from https://gist.github.com/quasiben/5e5c6a394d1a5fab8fb1ee0cb338ed8c
 set -xo pipefail
@@ -19,20 +19,24 @@ export PYTHONPATH=$PYTHONPATH:$PWD
 which python
 
 # Prepare output directory
-JOB_OUTPUT_DIR={{dask_settings.workdir}}
-scheduler_file={{dask_settings.scheduler_file_path}}
+scheduler_file={{machine.workdir / "scheduler_file.json"}}
 rm -f $scheduler_file
 cd /source/stempy/python
 export PYTHONPATH=$PYTHONPATH:$PWD
 
 # Setup image, preloads
 preload_file=stempy_dask.preload_serializers
-RMM_LOG_DIR="{{dask_settings.workdir}}/rmm-logs/"
+RMM_LOG_DIR="{{machine.workdir}}/rmm-logs/"
 
 echo "Using scheduler file in $image"
 echo "Using preload file: $preload_file"
 echo "Using RMM Log Directory: $RMM_LOG_DIR"
 
-{% include "scheduler.sh.j2" %}
+# Start scheduler
+{% include "1_scheduler.sh.j2" %}
 
-{% include "workers.sh.j2" %}
+# Start workers
+{% include "2_workers.sh.j2" %}
+
+# Run counting
+{% include "3_run.sh.j2" %}
