@@ -27,12 +27,12 @@ dependencies:
   - rmm
   - libnuma
   - cupy
-  # - libcufile=1.4.0.31 # bug requires this:https://github.com/mamba-org/mamba/issues/2167
   - pydantic
   - jinja2
   - tenacity
   - aiohttp
   - httpx
+  - pynvml=11.4.1 # breaking change https://github.com/dask/distributed/pull/7544, should be fixed soon.
   - pip:
     - pyzmq
     - orjson
