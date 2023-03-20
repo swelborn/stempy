@@ -45,6 +45,9 @@ set(_libs Threads::Threads)
 
 option(stempy_ENABLE_MPI "Build with MPI" OFF)
 if (stempy_ENABLE_MPI)
+  if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+  set(MPI_ROOT /usr/lib/aarch64-linux-gnu/)
+  endif()
   find_package(MPI REQUIRED)
   list(APPEND _libs MPI::MPI_C)
 
