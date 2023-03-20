@@ -51,6 +51,7 @@ struct Header {
   uint32_t frameNumber = 0, scanNumber = 0;
   std::vector<uint32_t> imageNumbers;
   std::vector<bool> complete;
+  unsigned int sector;
 
 #ifdef USE_MPI
   template <class Archive>
