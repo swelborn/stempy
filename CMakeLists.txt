@@ -47,8 +47,10 @@ option(stempy_ENABLE_MPI "Build with MPI" OFF)
 if (stempy_ENABLE_MPI)
   if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
   set(MPI_ROOT /usr/lib/aarch64-linux-gnu/)
+  else()
+  set(MPI_ROOT /usr/lib/x86_64-linux-gnu/)
   endif()
-  find_package(MPI REQUIRED)
+  find_package(MPI REQUIRED )
   list(APPEND _libs MPI::MPI_C)
 
   include_directories(
@@ -78,6 +80,26 @@ if (stempy_ENABLE_MPI)
   list(APPEND _src
     stempy/reader_mpi.cpp
   )
+endif()
+
+if (stempy_ENABLE_ZMQ)
+  include(FetchContent)
+
+  # Get msgpack
+  FetchContent_Declare(
+    msgpack-cxx
+    URL https://github.com/msgpack/msgpack-c/releases/download/cpp-6.0.0/msgpack-cxx-6.0.0.tar.gz
+  )
+  FetchContent_MakeAvailable(msgpack-cxx)
+  find_package(ZeroMQ PATHS /home/swelborn/local/)
+  find_package(cppzmq PATHS /home/swelborn/local/)
+  include_directories(
+    ${ZeroMQ_INCLUDE_DIR}
+  )
+  list(APPEND _src stempy/reader_zmq.cpp)
+  list(APPEND _libs msgpack-cxx)
+  list(APPEND _libs cppzmq)
+  list(APPEND _libs libzmq)
 endif()
 
 list(APPEND _libs pybind11::headers)
@@ -118,7 +140,7 @@ endif()
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(stem
-  PRIVATE ${_libs})
+  PUBLIC ${_libs})
 
 set_target_properties(stem
   PROPERTIES

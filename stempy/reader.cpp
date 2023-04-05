@@ -50,7 +50,8 @@ Block::Block(const Header& h)
   : header(h), data(new uint16_t[h.frameDimensions.first *
                                  h.frameDimensions.second * h.imagesInBlock],
                     std::default_delete<uint16_t[]>())
-{}
+{
+}
 
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
   : m_files(files), m_version(version)
@@ -98,13 +99,15 @@ istream& StreamReader::skip(std::streamoff offset)
   return m_stream;
 }
 
-template<typename T>
-istream & StreamReader::read(T& value){
-    return read(&value, sizeof(value));
+template <typename T>
+istream& StreamReader::read(T& value)
+{
+  return read(&value, sizeof(value));
 }
 
-template<typename T>
-istream & StreamReader::read(T* value, streamsize size){
+template <typename T>
+istream& StreamReader::read(T* value, streamsize size)
+{
 
   if (atEnd())
     throw EofException();
@@ -121,39 +124,40 @@ istream & StreamReader::read(T* value, streamsize size){
   return m_stream;
 }
 
-Header StreamReader::readHeaderVersion1() {
+Header StreamReader::readHeaderVersion1()
+{
 
   Header header;
 
   uint32_t headerData[1024];
-  read(headerData, 1024*sizeof(uint32_t));
+  read(headerData, 1024 * sizeof(uint32_t));
 
   int index = 0;
   header.imagesInBlock = headerData[index++];
   header.frameDimensions.second = headerData[index++];
   header.frameDimensions.first = headerData[index++];
   header.version = headerData[index++];
-  header.timestamp =  headerData[index++];
+  header.timestamp = headerData[index++];
   // Skip over 6 - 10 - reserved
   index += 5;
 
   // Now get the image numbers
   header.imageNumbers.resize(header.imagesInBlock);
-  copy(headerData + index,
-       headerData + index + header.imagesInBlock,
+  copy(headerData + index, headerData + index + header.imagesInBlock,
        header.imageNumbers.data());
 
   // Currently the imageNumbers seem to be 1 indexed, we hope this will change.
   // for now, convert them to 0 indexed to make the rest of the code easier.
   auto& imageNumbers = header.imageNumbers;
   for (unsigned i = 0; i < header.imagesInBlock; i++) {
-    imageNumbers[i]-= 1;
+    imageNumbers[i] -= 1;
   }
 
   return header;
 }
 
-Header StreamReader::readHeaderVersion2() {
+Header StreamReader::readHeaderVersion2()
+{
 
   Header header;
 
@@ -313,6 +317,21 @@ SectorStreamReader::SectorStreamReader(const vector<string>& files,
 
   openFiles();
   m_streamsIterator = m_streams.begin();
+}
+
+SectorStreamReader::SectorStreamReader(uint8_t version) : m_version(version)
+{
+  // Validate version
+  switch (m_version) {
+    case 4:
+    case 5:
+      break;
+    default:
+      std::ostringstream ss;
+      ss << "Unsupported version: ";
+      ss << m_version;
+      throw invalid_argument(ss.str());
+  }
 }
 
 SectorStreamReader::~SectorStreamReader()
@@ -781,6 +800,13 @@ SectorStreamThreadedReader::SectorStreamThreadedReader(
   initNumberOfThreads();
 }
 
+SectorStreamThreadedReader::SectorStreamThreadedReader(uint8_t version,
+                                                       int threads)
+  : SectorStreamReader(version), m_threads(threads)
+{
+  initNumberOfThreads();
+}
+
 void SectorStreamThreadedReader::initNumberOfThreads()
 {
   if (m_threads < 1) {
@@ -892,4 +918,4 @@ void SectorStreamMultiPassThreadedReader::readHeaders()
     }
   }
 }
-}
+} // namespace stempy

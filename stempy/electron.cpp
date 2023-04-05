@@ -2,6 +2,7 @@
 #include "electronthresholds.h"
 #include "python/pyreader.h"
 #include "reader.h"
+#include "reader_zmq.h"
 
 #include "config.h"
 
@@ -12,6 +13,13 @@
 #include <vtkm/worklet/WorkletMapTopology.h>
 #include <vtkm/worklet/WorkletPointNeighborhood.h>
 #endif
+
+#ifdef ENABLE_HDF5
+#include "h5cpp/h5readwrite.h"
+#include <cstdint>
+#include <stdexcept>
+#include <vector>
+#endif // ENABLE_HDF5
 
 #include <sstream>
 #include <stdexcept>
@@ -25,8 +33,7 @@ struct IsMaximalPixel : public vtkm::worklet::WorkletPointNeighborhood
 {
   using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
 
-  using ControlSignature = void(CellSetIn,
-                                FieldInNeighborhood neighborhood,
+  using ControlSignature = void(CellSetIn, FieldInNeighborhood neighborhood,
                                 FieldOut isMaximal);
 
   using ExecutionSignature = void(_2, _3);
@@ -455,8 +462,8 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
       auto frameStart =
         data + i * frameDimensions.first * frameDimensions.second;
       std::vector<FrameType> frame(frameStart,
-                                  frameStart + frameDimensions.first *
-                                                 frameDimensions.second);
+                                   frameStart + frameDimensions.first *
+                                                  frameDimensions.second);
 
       bool applyPreprocessing = !applyRowDarkSubtraction;
 
@@ -654,8 +661,7 @@ ElectronCountedData electronCount(Reader* reader,
         // so we can still electron count them.
         if (b.header.complete[0]) {
           sampleBlocks.push_back(std::move(b));
-        }
-        else {
+        } else {
           incompleteBlocks.push_back(std::move(b));
         }
 
@@ -664,6 +670,7 @@ ElectronCountedData electronCount(Reader* reader,
           sampleLock.unlock();
           sampleCondition.notify_all();
         }
+        return;
       }
       // We have our samples, so we should wait for the threshold to be
       // calculated in the main thread, before we can start counting.
@@ -673,11 +680,13 @@ ElectronCountedData electronCount(Reader* reader,
         });
         // Make sure we count the block.
         countBlock(b);
+        return;
       }
     }
     // We are electron counting
     else {
       countBlock(b);
+      return;
     }
   };
 
@@ -693,6 +702,8 @@ ElectronCountedData electronCount(Reader* reader,
   auto calculateThreshold = true;
 
 #ifdef USE_MPI
+  std::cout << "Gathering blocks" << std::endl;
+
   gatherBlocks(worldSize, rank, sampleBlocks);
   // Only calculate threshold on rank 0
   calculateThreshold = rank == 0;
@@ -753,13 +764,14 @@ ElectronCountedData electronCount(Reader* reader,
 
   // Now tell our workers to proceed
   electronCounting = true;
+  std::cout << "We are counting. " << std::endl;
   lock.unlock();
   sampleCondition.notify_all();
 
   // lambda to process sample and incomplete blocks
   auto countExtraBlock = [&events, &backgroundThreshold, &xRayThreshold,
                           darkReference, gain, applyRowDarkSubtraction,
-                          optimizedMean, applyRowDarkUseMean] (Block& b) {
+                          optimizedMean, applyRowDarkUseMean](Block& b) {
     auto data = b.data.get();
     auto frameDimensions = b.header.frameDimensions;
     for (unsigned j = 0; j < b.header.imagesInBlock; j++) {
@@ -782,22 +794,31 @@ ElectronCountedData electronCount(Reader* reader,
     auto& b = sampleBlocks[i];
     countExtraBlock(b);
   }
+  std::cout << "Done counting extras. " << std::endl;
 
   // Count the incomplete blocks
   for (size_t i = 0; i < incompleteBlocks.size(); i++) {
     auto& b = incompleteBlocks[i];
     countExtraBlock(b);
   }
+  std::cout << "Done counting incomplete. " << std::endl;
 
   // Make sure all threads are finished before returning the result
+  std::cout << "Waiting the threads to finish." << std::endl;
   done.wait();
+  std::cout << "Closing thread pool." << std::endl;
+  reader->reset_m_pool();
+  std::cout << "Closed thread pool." << std::endl;
 
 #ifdef USE_MPI
+  std::cout << "Gathering events." << std::endl;
+
   gatherEvents(worldSize, rank, events);
 #endif
 
   // Find the maximum number of frames in a position, and make sure all
   // scan positions have this number of frames.
+  std::cout << "Finding max number of frames in a position." << std::endl;
   size_t maxNumFrames = 0;
   for (size_t i = 0; i < events.size(); ++i) {
     if (events[i].size() > maxNumFrames) {
@@ -805,6 +826,7 @@ ElectronCountedData electronCount(Reader* reader,
     }
   }
 
+  std::cout << "Making sure they are all the same size." << std::endl;
   // Now make sure they are all the same size
   for (size_t i = 0; i < events.size(); ++i) {
     events[i].resize(maxNumFrames);
@@ -831,7 +853,7 @@ ElectronCountedData electronCount(Reader* reader,
   metadata.backgroundThresholdNSigma = threshold.backgroundThresholdNSigma;
   metadata.optimizedMean = threshold.optimizedMean;
   metadata.optimizedStdDev = threshold.optimizedStdDev;
-
+  positionMutexes.reset();
   return ret;
 }
 
@@ -873,5 +895,9 @@ template ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
 template ElectronCountedData electronCount(
   SectorStreamMultiPassThreadedReader* reader,
   const ElectronCountOptions& options);
+
+// ZMQ reader
+template ElectronCountedData electronCount(ReaderZMQ* reader,
+                                           const ElectronCountOptions& options);
 
 } // end namespace stempy
