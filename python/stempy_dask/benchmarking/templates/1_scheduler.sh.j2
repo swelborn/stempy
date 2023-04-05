@@ -1,7 +1,7 @@
 echo "Starting scheduler..."
 
-{% include "dask_env.j2" %}
-dask scheduler \
+{%- include "dask_env.j2" %}
+shifter dask scheduler \
 --protocol tcp \
 --interface hsn0 \
 --no-dashboard \
@@ -10,10 +10,10 @@ dask scheduler \
 --preload dask_cuda.initialize &
 
 # Wait for the scheduler to start
-sleep 2
+sleep 5
 until [ -f $scheduler_file ]
 do
-     sleep 2
+     sleep 1
 done
 
 echo "Scheduler file found"

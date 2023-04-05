@@ -2,9 +2,12 @@
 import copyreg
 import sys
 
+sys.path.append("/source/stempy/python/")
+
 import numpy as np
-import stempy._io
 from distributed.protocol import register_generic
+
+import stempy._io
 
 
 class DBlock:

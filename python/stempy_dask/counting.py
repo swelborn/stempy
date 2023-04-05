@@ -1,3 +1,4 @@
+import sys
 import time
 from collections import namedtuple
 from functools import partial
@@ -5,21 +6,79 @@ from pathlib import Path
 from time import perf_counter
 
 import cupy as cp
+import dask.array as da
 import distributed
 import numpy as np
-import stempy.image as stim
-import stempy.io as stio
+import rmm
 from distributed import as_completed, wait
 from pydantic import BaseModel
 
-import dask.array as da
+sys.path.append("/source/stempy/python")
+
 from stempy_dask.config import config as cfg
+from stempy_dask.config.config import Settings
+from stempy_dask.preload_serializers import DBlock
+from stempy_dask.schemas.datainfo import StempyDataInfo
+from stempy_dask.schemas.machine import DaskMachine
 from stempy_dask.utils import log as pretty_logger
 
-from .dask import DaskClient
+import stempy.io as stio
+
 from .kernels import kernels
 
 log = pretty_logger.create_logger("counting", cfg.settings)
+
+
+class DaskClient:
+    def __init__(self, machine: DaskMachine, settings: Settings):
+        self.settings = settings
+        self.machine = machine
+        self.system_settings = settings.system_settings
+
+    async def connect(self):
+        log.info("Connecting to client")
+        self.client = await distributed.Client(
+            scheduler_file=self.machine.workdir / "scheduler_file.json",
+            asynchronous=True,
+        )
+        log.info("Waiting for workers")
+        await self.client.wait_for_workers(n_workers=self.machine.ntasks)
+        await self.cuda_allocator()
+        await self.get_worker_info()
+        return self.client
+
+    async def cuda_allocator(self):
+        await self.client.run(cp.cuda.set_allocator, rmm.rmm_cupy_allocator)
+
+    async def get_worker_info(self):
+        self.workers_info = self.client.scheduler_info()["workers"]
+        self.worker_ids = []
+        for key in self.workers_info:
+            worker_info = self.workers_info[key]
+            self.worker_ids.append(worker_info["id"])  # Gets the worker ID
+        if self.system_settings.NERSC_HOST == "perlmutter":
+            self.gpu_workers = [x for x in self.worker_ids]
+            self.head_gpu_worker = self.gpu_workers[0]
+        # TODO: other systems / IO workers
+        # elif on_cori_gpu:
+        #     gpu_workers = [x for x in worker_ids]
+        #     head_gpu_worker = gpu_workers[0]
+        log.info(f"Total workers: {len(self.worker_ids)}")
+        log.info(f"Head GPU worker: {self.head_gpu_worker}")
+        log.info(f"GPU workers: {self.gpu_workers}")
+        # if self.dask_settings.io_workers > 0:
+        #     io_workers = [x for x in self.worker_ids if "IO" in x]
+        #     head_io_worker = io_workers[0]
+        #     gpu_workers_to_io_workers = len(gpu_workers) // len(io_workers)
+        #     gpu_workers_divvied = [
+        #         [gpu_workers[i], gpu_workers[i + 1]]
+        #         for i in range(0, len(gpu_workers), 2)
+        #     ]
+        #     log.info(f"Determined head io node: {head_io_worker}")
+        #     log.info(f"Head IO worker: {head_io_worker}")
+        #     log.info(f"IO workers: {io_workers}")
+        #     log.info(f"IO -> GPU worker map: {worker_map}")
+        #     worker_map = {k: v for k, v in zip((io_workers), gpu_workers_divvied)}
 
 
 def create_reader(data_info: StempyDataInfo):
@@ -67,10 +126,7 @@ def load_stem_image(reader, image_number=0):
     """
     b = reader.get_block_from_image_number(image_number)
 
-    block = namedtuple("Block", ["header", "data"])
-    block._block = b
-    block.header = b.header
-    block.data = np.array(b, copy=False)
+    block = DBlock(b.header, np.array(b, copy=False))
 
     return block
 
@@ -126,7 +182,11 @@ class Counter:
 
     async def count(self):
         gpu_workers = self.dask_client.gpu_workers
-        total_images = 128 * 128
+        if self.data_info.name == "big":
+            total_images = 512 * 512 * 4
+        else:
+            total_images = 128 * 128
+
         bytes_per_pattern = 1024 * 1024
         max_num_bytes = bytes_per_pattern * 100  # totally arbitrary right now
         batch_size = max_num_bytes // (
@@ -170,6 +230,7 @@ class Counter:
 
         await wait(positions_futures)
         t1 = time.perf_counter()
+        return positions_futures
 
 
 def get_maxima_2D(

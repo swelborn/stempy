@@ -94,6 +94,13 @@ class IPythonLogger(logging.Logger):
         self.addHandler(self.handler)
 
 
+class RegularLogger(logging.Logger):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.handler = logging.StreamHandler()
+        self.addHandler(self.handler)
+
+
 def create_logger(name, settings, log_level=logging.INFO):
     if settings.interpreter.jupyter:
         logger = JupyterLogger(name)
@@ -102,7 +109,7 @@ def create_logger(name, settings, log_level=logging.INFO):
         logger = IPythonLogger(name)
 
     else:
-        logger = logging.getLogger(name)
+        logger = RegularLogger(name)
 
     logger.setLevel(log_level)
     return logger

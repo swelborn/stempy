@@ -1,17 +1,18 @@
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from typing import List, Optional
 
-from constants import StempyDataInfo
 from pydantic import BaseModel, validator
-
-from . import Job, Machine
+from stempy_dask.schemas.datainfo import StempyDataInfo
+from stempy_dask.schemas.job import Job
+from stempy_dask.schemas.machine import Machine
 
 
 class BenchmarkType(str, Enum):
     DASK = "dask"
     STEMPY_MPI = "stempy-mpi"
-    STEMPY_SINGLE_NODE = "stempy_single_node"
+    STEMPY_SINGLE_NODE = "stempy-single-node"
 
     def __str__(self) -> str:
         return self.value
@@ -41,6 +42,9 @@ class BenchmarkMatrix(BaseModel):
     data: List[StempyDataInfo]
     ts: datetime = None
     variables: List[BenchmarkVariable]
+    workdir: Path
+    type: BenchmarkType
+    num_runs: int
 
     @validator("ts", pre=True, always=True)
     @classmethod

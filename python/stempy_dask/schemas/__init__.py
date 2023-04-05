@@ -4,6 +4,7 @@ from .benchmark import (
     BenchmarkType,
     BenchmarkVariable,
 )
+from .datainfo import StempyDataInfo
 from .events import SubmitJobEvent
 from .file import (
     FileSystemEvent,

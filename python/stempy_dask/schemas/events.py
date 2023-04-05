@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from app.schemas.job import Job
-from app.schemas.scan import Scan
+from .job import Job
+from .scan import Scan
 
 
 # Has to go in separate module rather the job.py because of circular import.

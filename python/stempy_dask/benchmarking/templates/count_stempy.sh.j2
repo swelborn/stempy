@@ -1,0 +1,12 @@
+{% include "0_header.j2"  %}
+
+error_exit()
+{
+  echo "$1" 1>&2
+  exit 1
+}
+
+# Remove any // ($DW_JOB_STRIPED has a trailing slash)
+srun --exclusive -c {{machine.cpus_per_task}} -n {{machine.nodes}} shifter python3 {{machine.count_path}} \
+--pad -l {{machine.data.location}} -t {{threshold}} -s {{job.scan_id}} --workdir {{machine.workdir}} --multi-pass \
+|| error_exit "Error shifter execution failed."

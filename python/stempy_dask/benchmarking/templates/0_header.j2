@@ -12,21 +12,28 @@
 #SBATCH --constraint={{machine.constraint}}
 #SBATCH --nodes={{machine.nodes}}
 #SBATCH --ntasks={{machine.ntasks}}
-#SBATCH --time=00:01:00
+{%- if machine.gpus_per_task %}
+#SBATCH --gpus-per-task={{machine.gpus_per_task}}
+{%- endif %}
+#SBATCH --time={{machine.time}}
 #SBATCH --job-name=distiller-{{job.job_type}}-{{job.id}}
 #SBATCH --exclusive
 #SBATCH --account={{machine.account}}
-{% if machine.balance_bridge %}
+{%- if machine.balance_bridge %}
 #SBATCH --balance_bridge={{machine.balance_bridge}}
-{% endif %}
-{% if machine.reservation %}
+{%- endif %}
+{%- if machine.reservation %}
 #SBATCH --reservation={{machine.reservation}}
-{% endif %}
-{% if machine.image %}
+{%- endif -%}
+{%- if machine.image %}
 #SBATCH --image={{machine.image}}
-{% else %}
+{%- else %}
 #SBATCH --image=openchemistry/stempy-mpi:latest
-{% endif %}
-{% if machine.volume %}
+{%- endif %}
+{%- if machine.volume %}
 #SBATCH --volume="{{machine.volume}}"
 {%- endif %}
+#SBATCH --chdir={{machine.workdir}}
+{# {%- if machine.cpus_per_task %} # something weird with this and its impact on n workers spawned
+#SBATCH --cpus-per-task={{machine.cpus_per_task}}
+{%- endif %} #}

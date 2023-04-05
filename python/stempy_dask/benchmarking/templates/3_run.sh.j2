@@ -1,18 +1,16 @@
-# Run counting script
-
 echo "Start counting"
-{% include "dask_env.j2" %}
-python "{{machine.count_script_path}}"  \
-  --scheduler-file {{machine.workdir / }} \
+
+{%- include "dask_env.j2" %}
+shifter python {{machine.count_path}}  \
+  --scheduler-file $scheduler_file \
   --protocol tcp \
   --interface hsn0 \
   --markdown \
-  --pool-size 38GB \
+  --rmm-pool-size 38GB \
   --rmm-log-directory "{{machine.workdir}}/rmm-logs/" \
   --workdir {{machine.workdir}} \
-  --runs 10 \
+  --runs {{matrix.num_runs}} \
   --no-silence-logs \
-  --enable-rmm-statistics 
 
 echo "Client done: $(date +%s)"
 # Wait for the cluster to shut down gracefully
