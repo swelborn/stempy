@@ -13,6 +13,22 @@
 
 namespace stempy {
 
+struct HeaderZMQ
+{
+  unsigned int scan_number = 0;
+  unsigned int frame_number = 0;
+  unsigned short nSTEM_positions_per_row_m1 = 0;
+  unsigned short nSTEM_rows_m1 = 0;
+  unsigned short STEM_x_position_in_row = 0;
+  unsigned short STEM_row_in_scan = 0;
+  unsigned short thread_id = 0;
+  unsigned short module = 0;
+
+  MSGPACK_DEFINE(scan_number, frame_number, nSTEM_positions_per_row_m1,
+                 nSTEM_rows_m1, STEM_x_position_in_row, STEM_row_in_scan,
+                 thread_id, module);
+};
+
 inline void print_memory_addresses(
   const std::vector<std::reference_wrapper<zmq::context_t>>& push_data_contexts)
 {
@@ -78,6 +94,7 @@ public:
       if (m_num_msgs_counter >=
           m_scan_number_to_num_msgs[m_current_scan_number]) {
         std::cout << "inside break " << std::endl;
+        std::cout << "hello " << std::endl;
         break;
       }
       zmq::message_t header_msg;
@@ -94,14 +111,14 @@ public:
         std::vector<Block> complete_blocks;
         auto pos = header.imageNumbers[0];
         auto frameNumber = header.frameNumber;
-        if (m_num_msgs_counter % 1000 == 0) {
+        if (m_num_msgs_counter % 10000 == 0) {
           std::cout << "num msgs counter " << m_num_msgs_counter << std::endl;
         }
         std::unique_lock<std::mutex> cacheLock(m_cacheMutex);
         auto& frame = m_frameCache[frameNumber];
         cacheLock.unlock();
 
-        // Do we need to allocate the frame, use a double check lock
+        // Do we need to allocate the frame,use a double check lock
         if (std::atomic_load(&frame.block.data) == nullptr) {
           std::unique_lock<std::mutex> lock(frame.mutex);
           // Check again now we have the mutex
@@ -145,21 +162,22 @@ public:
         for (auto& b : complete_blocks) {
           inner_futures.emplace_back(
             std::make_pair(i, inner_pool->enqueue([&func, b, i]() mutable {
-              cpu_set_t cpuset;
-              CPU_ZERO(&cpuset);
-              CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
-
-              pthread_t current_thread = pthread_self();
-              int ret = pthread_setaffinity_np(current_thread,
-                                               sizeof(cpu_set_t), &cpuset);
-              if (ret != 0) {
-                std::cerr << "Error setting thread affinity: " << ret
-                          << std::endl;
-                return;
-              }
+              // cpu_set_t cpuset;
+              // CPU_ZERO(&cpuset);
+              // CPU_SET(b.header.frameNumber %
+              //           std::thread::hardware_concurrency(),
+              //         &cpuset);
+              // pthread_t current_thread = pthread_self();
+              // int ret = pthread_setaffinity_np(current_thread,
+              //                                  sizeof(cpu_set_t), &cpuset);
+              // if (ret != 0) {
+              //   std::cerr << "Error setting thread affinity: " << ret
+              //             << std::endl;
+              //   return;
+              // }
 
               func(b);
-              return;
+              b.data.reset();
             })));
         }
 
@@ -172,7 +190,7 @@ public:
 
     // TODO: Sleep helps this. Not sure why.
     // Wait for all the inner_futures to complete
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(3));
 
     bool all_futures_ready = false;
     size_t j = 0;
@@ -193,7 +211,7 @@ public:
           }
         } else {
           all_futures_ready = false; // At least one future is not ready
-          std::cout << "Thread " << thread_id << " future " << (j + 1) << " of "
+          std::cout << "Thread " << thread_id << " future " << (j + 1) << "of "
                     << inner_futures.size() << " is not ready" << std::endl;
           // std::this_thread::sleep_for(std::chrono::seconds(1));
           break;
@@ -225,7 +243,7 @@ public:
         m_pool->enqueue([this, &func, i]() { process_frames(func, i); }));
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    // std::this_thread::sleep_for(std::chrono::seconds(5));
     // Return a future that is resolved once the processing is complete
     auto complete = std::async(std::launch::async, [this]() {
       for (auto& future : this->m_futures) {
