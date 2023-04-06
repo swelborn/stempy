@@ -58,33 +58,35 @@ void ReaderZMQ::setup_sockets()
 
 Header ReaderZMQ::readHeader(zmq::message_t& header_msg)
 {
+
+  // Initialize block header
   Header header;
   header.imagesInBlock = 1;
   header.frameDimensions = SECTOR_DIMENSIONS_VERSION_5;
   header.version = m_version;
+
   // Unpack the message data into a msgpack::object_handle
-  msgpack::object_handle oh =
-    msgpack::unpack((const char*)header_msg.data(), header_msg.size());
+  msgpack::object_handle oh = msgpack::unpack(
+    static_cast<const char*>(header_msg.data()), header_msg.size());
+  msgpack::object deserialized_obj = oh.get();
+
+  // Convert it into the HeaderZMQ
+  HeaderZMQ received_header_zmq;
+  deserialized_obj.convert(received_header_zmq);
 
   // Extract the header fields from the unpacked data
-  auto map = oh.get().as<std::map<std::string, msgpack::object>>();
-  header.scanNumber = map["scan_number"].as<uint32_t>();
-
-  header.frameNumber = map["frame_number"].as<uint32_t>();
-
+  header.scanNumber = received_header_zmq.scan_number;
+  header.frameNumber = received_header_zmq.frame_number;
   header.scanDimensions.first =
-    map["nSTEM_positions_per_row_m1"].as<uint16_t>();
-
-  header.scanDimensions.second = map["nSTEM_rows_m1"].as<uint16_t>();
-
-  auto scanXposition = map["STEM_x_position_in_row"].as<uint16_t>();
-  auto scanYposition = map["STEM_row_in_scan"].as<uint16_t>();
-
-  header.sector = map["module"].as<uint32_t>();
-
+    received_header_zmq.nSTEM_positions_per_row_m1 + 1;
+  header.scanDimensions.second = received_header_zmq.nSTEM_rows_m1 + 1;
+  auto scanXposition = received_header_zmq.STEM_x_position_in_row;
+  auto scanYposition = received_header_zmq.STEM_row_in_scan;
+  header.sector = received_header_zmq.module;
   header.imageNumbers.push_back(scanYposition * header.scanDimensions.first +
                                 scanXposition);
 
+  // Return block header
   return header;
 }
 
