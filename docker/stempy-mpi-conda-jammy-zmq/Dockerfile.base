@@ -34,6 +34,7 @@ RUN apt-get update                                      && \
     libtool \
     zip \
     curl \
+    clang-format \
     libboost-all-dev \
     pkg-config                                          && \
     apt-get clean all                                   && \
@@ -109,6 +110,7 @@ RUN mkdir -p /build/stempy                                                      
     cmake -DCMAKE_BUILD_TYPE:STRING=Release \
     -Dstempy_ENABLE_VTKm:BOOL=OFF \
     -Dstempy_ENABLE_MPI:BOOL=ON \
+    -Dstempy_ENABLE_ZMQ:BOOL=ON \
     /source/stempy .                                                                          && \
     make -j 16                                                                                && \
     cp -r -L /build/stempy/lib/stempy \
