@@ -2,8 +2,11 @@
 .cache
 *.egg-info
 __pycache__
-.vscode/*
 output/*
 .idea
 docs/build/*
 build/
+.vscode/
+.pytest_cache/
+.mypy_cache/
+.devcontainer/

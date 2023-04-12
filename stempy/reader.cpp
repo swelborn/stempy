@@ -46,6 +46,23 @@ Header::Header(Dimensions2D frameDimensions_, uint32_t imageNumInBlock_,
   this->imageNumbers = imageNumbers_;
 }
 
+Header::Header(const HeaderZMQ& header_zmq)
+{
+  imagesInBlock = 1;
+  frameDimensions = SECTOR_DIMENSIONS_VERSION_5;
+  version = 5; // Set this to the appropriate version if available in the
+               // HeaderZMQ struct
+
+  scanNumber = header_zmq.scan_number;
+  frameNumber = header_zmq.frame_number;
+  scanDimensions.first = header_zmq.nSTEM_positions_per_row_m1;
+  scanDimensions.second = header_zmq.nSTEM_rows_m1;
+  sector = header_zmq.module;
+  auto scanXposition = header_zmq.STEM_x_position_in_row;
+  auto scanYposition = header_zmq.STEM_row_in_scan;
+  imageNumbers.push_back(scanYposition * scanDimensions.first + scanXposition);
+}
+
 Block::Block(const Header& h)
   : header(h), data(new uint16_t[h.frameDimensions.first *
                                  h.frameDimensions.second * h.imagesInBlock],

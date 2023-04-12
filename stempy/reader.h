@@ -14,6 +14,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <msgpack.hpp>
 #include <mutex>
 #include <queue>
 #include <sstream>
@@ -46,6 +47,22 @@ struct EofException : public std::exception
   const char* what() const throw() { return "EOF Exception"; }
 };
 
+struct HeaderZMQ
+{
+  unsigned int scan_number = 0;
+  unsigned int frame_number = 0;
+  unsigned short nSTEM_positions_per_row_m1 = 0;
+  unsigned short nSTEM_rows_m1 = 0;
+  unsigned short STEM_x_position_in_row = 0;
+  unsigned short STEM_row_in_scan = 0;
+  unsigned short thread_id = 0;
+  unsigned short module = 0;
+
+  MSGPACK_DEFINE(scan_number, frame_number, nSTEM_positions_per_row_m1,
+                 nSTEM_rows_m1, STEM_x_position_in_row, STEM_row_in_scan,
+                 thread_id, module);
+};
+
 struct Header
 {
   Dimensions2D scanDimensions = { 0, 0 };
@@ -67,6 +84,9 @@ struct Header
   Header& operator=(Header&& header) noexcept = default;
   Header(Dimensions2D frameDimensions, uint32_t imageNumInBlock,
          Dimensions2D scanDimensions, std::vector<uint32_t>& imageNumbers);
+
+  // Constructor to take HeaderZMQ
+  Header(const HeaderZMQ& header_zmq);
 };
 
 struct Block
@@ -227,7 +247,10 @@ public:
   void toHdf5(const std::string& path, H5Format format = H5Format::Frame);
 #endif // ENABLE_HDF5
 
-  uint8_t version() const { return m_version; };
+  uint8_t version() const
+  {
+    return m_version;
+  };
 
   struct SectorStream
   {
@@ -260,7 +283,10 @@ private:
   uint8_t m_version;
 
   // Whether or not we are at the end of all of the files
-  bool atEnd() const { return m_streams.empty(); }
+  bool atEnd() const
+  {
+    return m_streams.empty();
+  }
 
   Header readHeader();
   void readSectorData(Block& block, int sector);

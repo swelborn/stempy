@@ -2,6 +2,7 @@
 #define STEMPY_READER_ZMQ_H
 
 #include "reader.h"
+#include <condition_variable>
 #include <iostream>
 #include <msgpack.hpp>
 #include <pthread.h>
@@ -13,53 +14,128 @@
 
 namespace stempy {
 
-struct HeaderZMQ
-{
-  unsigned int scan_number = 0;
-  unsigned int frame_number = 0;
-  unsigned short nSTEM_positions_per_row_m1 = 0;
-  unsigned short nSTEM_rows_m1 = 0;
-  unsigned short STEM_x_position_in_row = 0;
-  unsigned short STEM_row_in_scan = 0;
-  unsigned short thread_id = 0;
-  unsigned short module = 0;
-
-  MSGPACK_DEFINE(scan_number, frame_number, nSTEM_positions_per_row_m1,
-                 nSTEM_rows_m1, STEM_x_position_in_row, STEM_row_in_scan,
-                 thread_id, module);
-};
-
-inline void print_memory_addresses(
-  const std::vector<std::reference_wrapper<zmq::context_t>>& push_data_contexts)
-{
-  for (size_t i = 0; i < push_data_contexts.size(); ++i) {
-    std::cout << "Address of context " << i << ": "
-              << &push_data_contexts[i].get() << std::endl;
-  }
-}
-
-inline void print_memory_address(
-  const std::reference_wrapper<zmq::context_t>& push_data_context, int i)
-{
-  std::cout << "Address of context " << i << ": " << &push_data_context.get()
-            << std::endl;
-}
-
+/**
+ * @brief ReaderZMQ class for multi-threaded frame processing from a NodeGroups.
+ *
+ * This class extends the SectorStreamThreadedReader and provides a specific
+ * implementation for processing STEM frames from NodeGroups.
+ * It uses multiple threads to process frames and manage resources.
+ */
 class ReaderZMQ : public SectorStreamThreadedReader
 {
 public:
-  ReaderZMQ(std::vector<std::vector<std::reference_wrapper<zmq::context_t>>>&
+  std::map<unsigned int, unsigned int> m_scan_number_to_num_msgs;
+  unsigned int m_current_scan_number = 0;
+  std::mutex m_pull_data_context_mutex;
+
+private:
+  std::vector<std::vector<std::shared_ptr<zmq::context_t>>>&
+    m_pull_data_contexts;
+  zmq::context_t* m_pull_frame_info_context;
+  std::unique_ptr<zmq::socket_t> m_pull_frame_info_socket;
+  std::vector<std::unique_ptr<zmq::socket_t>> m_pull_data_sockets;
+  std::vector<std::vector<std::string>> m_pull_data_addrs;
+  uint8_t m_version;
+  std::atomic<size_t> m_num_msgs_counter{ 0 };
+  std::condition_variable m_release_threads_cv;
+  std::atomic<int> m_finished_threads{ 0 };
+
+  /**
+   * @brief Reads and processes header data from a received ZeroMQ message.
+   *
+   * Extracts the header information from the given ZeroMQ message, deserializes
+   * it using msgpack, and returns a stempy::Header struct.
+   *
+   * @param header_msg A reference to a zmq::message_t containing the header
+   * data.
+   * @return A Header struct containing the header data.
+   */
+  Header readHeader(zmq::message_t& header_msg);
+
+  /**
+   * @brief Sets up the pull data addresses for the ReaderZMQ.
+   *
+   * Configures the pull data addresses that will be used to receive data from
+   * the NodeGroups. The addresses are in the format "inproc://<index>",
+   * where the index is calculated based on the node_group_number and
+   * socket_idx_in_node_group.
+   */
+  void setup_pull_data_addrs();
+
+  /**
+   * @brief Sets up the ZeroMQ sockets for receiving data.
+   *
+   * Initializes the ZeroMQ sockets used to receive data from the NodeGroups.
+   * Configures sockets for receiving frame information and sector data for each
+   * thread.
+   */
+  void setup_sockets();
+
+  /**
+   * @brief Reads and processes sector data from a received ZeroMQ message
+   * (version 5).
+   *
+   * Extracts and processes the sector data from the given ZeroMQ message and
+   * updates the Block struct with the received data.
+   *
+   * @param data_msg A reference to a zmq::message_t containing the sector data.
+   * @param block A reference to a Block struct that will be updated with the
+   * sector data.
+   * @param sector The sector number.
+   */
+  void readSectorDataVersion5(zmq::message_t& data_msg, Block& block,
+                              int sector);
+
+public:
+  /**
+   * @brief ReaderZMQ constructor.
+   *
+   * Initializes the ReaderZMQ object with the provided parameters.
+   *
+   * @param pull_data_contexts A reference to a vector of vectors containing
+   * shared_ptr<zmq::context_t>.
+   * @param pull_frame_info_context A pointer to a zmq::context_t object for
+   * pulling frame information.
+   * @param version The version number for the data format, defaults to 5.
+   * @param threads The number of threads to use for processing, defaults to 0
+   * (automatically determined).
+   */
+  ReaderZMQ(std::vector<std::vector<std::shared_ptr<zmq::context_t>>>&
               pull_data_contexts,
             zmq::context_t* pull_frame_info_context, uint8_t version = 5,
             int threads = 0);
 
-  template <typename Functor>
-  void process_frames(Functor& func, int i)
-  {
+  /**
+   * @brief Pulls frame information from the NodeGroups.
+   *
+   * Retrieves and processes frame information from the NodeGroups by
+   * receiving a message containing the scan number to frame count mapping.
+   * Updates the m_scan_number_to_num_msgs map with the received data.
+   */
+  void pull_frame_info();
 
+  /**
+   * @brief Processes frames using the given functor and a ZeroMQ pull socket.
+   *
+   * Reads frames from the specified ZeroMQ pull socket and processes them
+   * using the provided functor. The processing is done on a per-frame basis.
+   * This function also handles thread synchronization, ensuring that all
+   * frames are properly processed before moving on to incomplete blocks.
+   *
+   * @tparam Functor The type of the processing functor.
+   * @param func The processing functor.
+   * @param pull_socket A reference to the ZeroMQ pull socket used to receive
+   * data.
+   * @param i The index of the pull_socket, also used to set thread affinity.
+   */
+  template <typename Functor>
+  void process_frames(Functor& func, zmq::socket_t& pull_socket, int i)
+  {
+    // Create a single-threaded pool for inner processing
     std::unique_ptr<ThreadPool> inner_pool = std::make_unique<ThreadPool>(1);
     std::vector<std::pair<int, std::future<void>>> inner_futures;
 
+    // Set thread affinity for the current thread
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
@@ -72,56 +148,40 @@ public:
       return;
     }
 
-    std::unique_lock<std::mutex> pullSocketLock(m_pull_data_context_mutex);
-    int group_index = i % m_pull_data_contexts.size();
-    int socket_index = (i / m_pull_data_contexts.size()) %
-                       m_pull_data_contexts[group_index].size();
-
-    zmq::socket_t pull_socket(
-      m_pull_data_contexts[group_index][socket_index].get(),
-      zmq::socket_type::pull);
-    pull_socket.set(zmq::sockopt::immediate, 1);
-
-    pull_socket.connect(m_pull_data_addrs[group_index][socket_index]);
-    std::cout << "Thread " << i << " connected to: "
-              << m_pull_data_addrs[group_index][socket_index]
-              << "\nSocket idx: " << socket_index
-              << "\nGroup idx: " << group_index << std::endl;
-    pullSocketLock.unlock();
-
+    // Main loop for processing frames
     while (true) {
-
+      // Check if all messages have been processed
       if (m_num_msgs_counter >=
           m_scan_number_to_num_msgs[m_current_scan_number]) {
         std::cout << "inside break " << std::endl;
-        std::cout << "hello " << std::endl;
         break;
       }
+
+      // Receive header message
       zmq::message_t header_msg;
       bool header_received =
         pull_socket.recv(header_msg, zmq::recv_flags::dontwait);
 
+      // Process header and corresponding data message
       if (header_received) {
-        // Read the header
         m_num_msgs_counter++;
-
-        auto header = readHeader(header_msg);
-        auto sector = header.sector;
-
-        std::vector<Block> complete_blocks;
-        auto pos = header.imageNumbers[0];
-        auto frameNumber = header.frameNumber;
         if (m_num_msgs_counter % 10000 == 0) {
           std::cout << "num msgs counter " << m_num_msgs_counter << std::endl;
         }
+
+        auto header = readHeader(header_msg);
+        auto sector = header.sector;
+        auto pos = header.imageNumbers[0];
+        auto frameNumber = header.frameNumber;
+
+        // Lock frame cache and get frame from it
         std::unique_lock<std::mutex> cacheLock(m_cacheMutex);
         auto& frame = m_frameCache[frameNumber];
         cacheLock.unlock();
 
-        // Do we need to allocate the frame,use a double check lock
+        // Initialize frame data if it's not already initialized
         if (std::atomic_load(&frame.block.data) == nullptr) {
           std::unique_lock<std::mutex> lock(frame.mutex);
-          // Check again now we have the mutex
           if (std::atomic_load(&frame.block.data) == nullptr) {
             frame.block.header.version = version();
             frame.block.header.scanNumber = header.scanNumber;
@@ -132,8 +192,8 @@ public:
             frame.block.header.frameDimensions = FRAME_DIMENSIONS;
             frame.block.header.complete.resize(1);
             frame.block.header.complete[0] = false;
-            std::shared_ptr<uint16_t> data;
 
+            std::shared_ptr<uint16_t> data;
             data.reset(new uint16_t[frame.block.header.frameDimensions.first *
                                     frame.block.header.frameDimensions.second],
                        std::default_delete<uint16_t[]>());
@@ -145,11 +205,13 @@ public:
           }
         }
 
+        // Receive data message and process sector data
         zmq::message_t data_msg;
         pull_socket.recv(data_msg, zmq::recv_flags::none);
         readSectorDataVersion5(data_msg, frame.block, sector);
 
-        // Now now have the complete frame
+        // Check if the frame is complete
+        std::vector<Block> complete_blocks;
         if (++frame.sectorCount == 4) {
           cacheLock.lock();
           frame.block.header.complete[0] = true;
@@ -158,40 +220,30 @@ public:
           cacheLock.unlock();
         }
 
-        // Finally call the function on any completed frames
+        // Call function on any completed frames
         for (auto& b : complete_blocks) {
           inner_futures.emplace_back(
             std::make_pair(i, inner_pool->enqueue([&func, b, i]() mutable {
-              // cpu_set_t cpuset;
-              // CPU_ZERO(&cpuset);
-              // CPU_SET(b.header.frameNumber %
-              //           std::thread::hardware_concurrency(),
-              //         &cpuset);
-              // pthread_t current_thread = pthread_self();
-              // int ret = pthread_setaffinity_np(current_thread,
-              //                                  sizeof(cpu_set_t), &cpuset);
-              // if (ret != 0) {
-              //   std::cerr << "Error setting thread affinity: " << ret
-              //             << std::endl;
-              //   return;
-              // }
-
               func(b);
               b.data.reset();
             })));
         }
-
-        // Finally call the function on any completed frames
-        // for (auto& b : complete_blocks) {
-        // func(b);
-        // }
       }
     }
 
-    // TODO: Sleep helps this. Not sure why.
-    // Wait for all the inner_futures to complete
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    // Synchronize threads before entering the while loop
+    {
+      std::unique_lock<std::mutex> lock(m_cacheMutex);
+      ++m_finished_threads;
+      if (m_finished_threads.load() == m_threads) {
+        m_release_threads_cv.notify_all();
+      } else {
+        m_release_threads_cv.wait(
+          lock, [this]() { return m_finished_threads.load() == m_threads; });
+      }
+    }
 
+    // Check if all inner futures are ready
     bool all_futures_ready = false;
     size_t j = 0;
     while (!all_futures_ready) {
@@ -213,7 +265,6 @@ public:
           all_futures_ready = false; // At least one future is not ready
           std::cout << "Thread " << thread_id << " future " << (j + 1) << "of "
                     << inner_futures.size() << " is not ready" << std::endl;
-          // std::this_thread::sleep_for(std::chrono::seconds(1));
           break;
         }
       }
@@ -221,29 +272,68 @@ public:
         break;
       }
     }
-    inner_pool.reset();
+
+    // Process incomplete blocks
+    bool more_frames = true;
+    while (more_frames) {
+      std::unique_lock<std::mutex> cacheLock(m_cacheMutex);
+      auto frame_it = m_frameCache.begin();
+      if (frame_it != m_frameCache.end()) {
+        Block block = frame_it->second.block;
+        m_frameCache.erase(frame_it);
+        cacheLock.unlock();
+
+        func(block);
+        block.data.reset();
+      } else {
+        more_frames = false;
+      }
+    }
+
+    // Synchronize threads before exiting
+    {
+      std::unique_lock<std::mutex> lock(m_cacheMutex);
+      --m_finished_threads;
+      if (m_finished_threads.load() == 0) {
+        m_release_threads_cv.notify_all();
+      } else {
+        m_release_threads_cv.wait(
+          lock, [this]() { return m_finished_threads.load() == 0; });
+      }
+    }
+
     std::cout << "Done thread " << i << std::endl;
     return;
   }
 
+  /**
+   * @brief Reads all data from the NodeGroups and processes it using the given
+   * functor.
+   *
+   * Sets up the thread pool, processes data from the NodeGroups, and processes
+   * it using the given functor. Returns a future<void> that resolves when all
+   * processing is complete.
+   *
+   * @tparam Functor The type of the processing functor.
+   * @param func The processing functor.
+   * @return A future<void> that resolves when all processing is complete.
+   */
   template <typename Functor>
   std::future<void> readAll(Functor& func)
   {
     m_num_msgs_counter.store(0);
     m_pool = std::make_unique<ThreadPool>(m_threads);
-    std::cout << "Creating worker threads" << std::endl;
-    std::cout << "Num msgs_counter " << m_num_msgs_counter << std::endl;
+    std::cout << "Creating worker threads." << std::endl;
     std::cout << "m_scan_number_to_num_msgs "
               << m_scan_number_to_num_msgs[m_current_scan_number] << std::endl;
 
     // Create worker threads
     for (int i = 0; i < m_threads; i++) {
-      std::cout << "Creating worker thread " << i << std::endl;
-      m_futures.emplace_back(
-        m_pool->enqueue([this, &func, i]() { process_frames(func, i); }));
+      m_futures.emplace_back(m_pool->enqueue([this, &func, i]() {
+        process_frames(func, *m_pull_data_sockets[i], i);
+      }));
     }
 
-    // std::this_thread::sleep_for(std::chrono::seconds(5));
     // Return a future that is resolved once the processing is complete
     auto complete = std::async(std::launch::async, [this]() {
       for (auto& future : this->m_futures) {
@@ -254,27 +344,6 @@ public:
     std::cout << "About to return complete" << std::endl;
     return complete;
   }
-
-  Header readHeader(zmq::message_t& header_msg);
-  void setup_sockets();
-  void readSectorDataVersion5(zmq::message_t& data_msg, Block& block,
-                              int sector);
-
-  void pull_frame_info();
-  std::map<unsigned int, unsigned int> m_scan_number_to_num_msgs;
-  unsigned int m_current_scan_number = 0;
-  std::mutex m_pull_data_context_mutex;
-
-private:
-  std::vector<std::vector<std::reference_wrapper<zmq::context_t>>>&
-    m_pull_data_contexts;
-  zmq::context_t* m_pull_frame_info_context;
-  std::unique_ptr<zmq::socket_t> m_pull_frame_info_socket;
-  std::vector<std::unique_ptr<zmq::socket_t>> m_pull_data_sockets;
-  std::vector<std::vector<std::string>> m_pull_data_addrs;
-
-  uint8_t m_version;
-  std::atomic<size_t> m_num_msgs_counter{ 0 };
 };
 } // namespace stempy
 #endif /* STEMPY_READER_ZMQ_H */
