@@ -100,21 +100,3 @@ COPY ./docker/stempy-mpi-conda-jammy-zmq/conda /condaenv
 ARG CONDA_ENV_DIR=/condaenv
 RUN mamba env update -n base -f ${CONDA_ENV_DIR}/environment.yml      && \
     conda clean -a -y -q                       
-
-ARG PYTHON_VERSION=3.7
-WORKDIR /source
-COPY . /source/stempy/
-
-RUN mkdir -p /build/stempy                                                                    && \
-    cd /build/stempy                                                                          && \
-    cmake -DCMAKE_BUILD_TYPE:STRING=Release \
-    -Dstempy_ENABLE_VTKm:BOOL=OFF \
-    -Dstempy_ENABLE_MPI:BOOL=ON \
-    -Dstempy_ENABLE_ZMQ:BOOL=ON \
-    /source/stempy .                                                                          && \
-    make -j 16                                                                                && \
-    cp -r -L /build/stempy/lib/stempy \
-    /opt/conda/lib/python${PYTHON_VERSION}/site-packages                                        && \
-    rm -rf /source/stempy                                                                     
-
-RUN /sbin/ldconfig

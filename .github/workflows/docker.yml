@@ -5,6 +5,7 @@ on:
     branches:
       - "master"
       - "update-dockerfile-staging"
+      - "zmq-streaming"
   pull_request:
     branches:
       - "master"
@@ -22,6 +23,8 @@ jobs:
             tag-suffix: -conda
           - version: stempy-mpi
             tag-suffix: -conda-jammy
+          - version: stempy-mpi
+            tag-suffix: -conda-jammy-zmq
 
     steps:
 
@@ -90,6 +93,8 @@ jobs:
             tag-suffix: -conda
           - version: stempy-mpi
             tag-suffix: -conda-jammy
+          - version: stempy-mpi
+            tag-suffix: -conda-jammy-zmq
 
       fail-fast: false
     steps:
