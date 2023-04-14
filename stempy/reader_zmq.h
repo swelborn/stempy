@@ -15,10 +15,11 @@
 namespace stempy {
 
 /**
- * @brief ReaderZMQ class for multi-threaded frame processing from a NodeGroups.
+ * @brief ReaderZMQ class for multi-threaded frame processing from NodeGroups.
  *
  * This class extends the SectorStreamThreadedReader and provides a specific
  * implementation for processing STEM frames from NodeGroups.
+ *
  * It uses multiple threads to process frames and manage resources.
  */
 class ReaderZMQ : public SectorStreamThreadedReader
@@ -91,15 +92,15 @@ public:
   /**
    * @brief ReaderZMQ constructor.
    *
-   * Initializes the ReaderZMQ object with the provided parameters.
+   * Contexts are passed in from Nodes.cpp, necessary because inproc requires
+   * the same context for inproc. NodeGroups also contain these contexts.
    *
    * @param pull_data_contexts A reference to a vector of vectors containing
    * shared_ptr<zmq::context_t>.
    * @param pull_frame_info_context A pointer to a zmq::context_t object for
    * pulling frame information.
    * @param version The version number for the data format, defaults to 5.
-   * @param threads The number of threads to use for processing, defaults to 0
-   * (automatically determined).
+   * @param threads The number of threads to use for processing, defaults to 0.
    */
   ReaderZMQ(std::vector<std::vector<std::shared_ptr<zmq::context_t>>>&
               pull_data_contexts,
@@ -116,15 +117,44 @@ public:
   void pull_frame_info();
 
   /**
-   * @brief Processes frames using the given functor and a ZeroMQ pull socket.
+   * @brief Implements a barrier synchronization primitive for multithreading.
    *
-   * Reads frames from the specified ZeroMQ pull socket and processes them
-   * using the provided functor. The processing is done on a per-frame basis.
-   * This function also handles thread synchronization, ensuring that all
-   * frames are properly processed before moving on to incomplete blocks.
+   * This function is called by multiple threads to ensure that all threads
+   * reach a certain point in their execution before any of them proceed.
+   *
+   * When the last thread arrives at the barrier, the barrier count is reset
+   * and all waiting threads are notified to continue.
+   *
+   * NOTE: copied from 4dstem repo.
+   */
+  void barrier(std::string msg = "")
+  {
+    std::unique_lock<std::mutex> lock(m_thread_synchronization_mutex);
+    m_finished_threads++;
+
+    if (m_finished_threads == m_threads) {
+      std::cout << msg << std::endl;
+      m_finished_threads = 0; // Reset the count for the next barrier
+      m_release_threads_cv.notify_all();
+    } else {
+      m_release_threads_cv.wait(lock,
+                                [this] { return m_finished_threads == 0; });
+    }
+  }
+
+  /**
+   * @brief Processes frames sent by NodeGroups using the given functor.
+   *
+   * Reads frames from NodeGroups processes them using the provided functor.
+   * This function runs on m_threads, and uses m_frame_cache to share all frames
+   * received across the threads.
+   *
+   * Once the number of expected frames is reached, receiving loop is broken in
+   * all threads, and continues to run the enqueued functor, along with the
+   * remaining incomplete frames in the cache.
    *
    * @tparam Functor The type of the processing functor.
-   * @param func The processing functor.
+   * @param func The processing functor. electronCount is used.
    * @param pull_socket A reference to the ZeroMQ pull socket used to receive
    * data.
    * @param i The index of the pull_socket, also used to set thread affinity.
@@ -136,22 +166,15 @@ public:
     std::unique_ptr<ThreadPool> inner_pool = std::make_unique<ThreadPool>(1);
     std::vector<std::pair<int, std::future<void>>> inner_futures;
 
-    // Set thread affinity for the current thread
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
+    // TODO: remove this
+    // This was used to create pull sockets in each thread. I thought it was a
+    // bottleneck, but I don't think that was the case. Leaving here for now,
+    // just in case.
 
-    pthread_t current_thread = pthread_self();
-    int ret =
-      pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
-    if (ret != 0) {
-      std::cerr << "Error setting thread affinity: " << ret << std::endl;
-      return;
-    }
-
-    // std::unique_lock<std::mutex> pullSocketLock(m_pull_data_context_mutex);
-    // int group_index = i % m_pull_data_contexts.size();
-    // int socket_index = (i / m_pull_data_contexts.size()) %
+    // std::unique_lock<std::mutex>
+    // pullSocketLock(m_pull_data_context_mutex); int group_index = i %
+    // m_pull_data_contexts.size(); int socket_index = (i /
+    // m_pull_data_contexts.size()) %
     //                    m_pull_data_contexts[group_index].size();
 
     // Create a new pull data socket and assign it to the appropriate index
@@ -255,25 +278,17 @@ public:
       }
     }
 
-    if (i == 0)
-    {
+    if (i == 0) {
       std::cout << "Done receiving data." << std::endl;
     }
 
     // Synchronize threads before entering the while loop
-    {
-      std::unique_lock<std::mutex> lock(m_thread_synchronization_mutex);
-      ++m_finished_threads;
-      std::cout << "Synchronize thread " << m_finished_threads << std::endl;
-      if (m_finished_threads.load() == m_threads) {
-        m_release_threads_cv.notify_all();
-      } else {
-        m_release_threads_cv.wait(
-          lock, [this]() { return m_finished_threads.load() == m_threads; });
-      }
-    }
+    barrier("Synchronized threads after receiving data.");
 
     // Check if all inner futures are ready
+    // TODO: this is likely not necessary, could probably be done by a
+    // futures.wait() or something - this was originally written to debug a
+    // problem that was fixed upstream (header was not being sent properly).
     bool all_futures_ready = false;
     size_t j = 0;
     while (!all_futures_ready) {
@@ -284,7 +299,7 @@ public:
         int thread_id = std::get<0>(inner_futures[j]);
         std::future<void>& future = std::get<1>(inner_futures[j]);
         std::future_status status =
-          future.wait_for(std::chrono::milliseconds(1000));
+          future.wait_for(std::chrono::milliseconds(100));
 
         if (status == std::future_status::ready) {
           future.get();
@@ -305,7 +320,6 @@ public:
 
     // Process incomplete blocks
     bool more_frames = true;
-    std::cout << "Thread " << i << "processing incomplete blocks" << std::endl;
     while (more_frames) {
       std::unique_lock<std::mutex> cacheLock(m_cacheMutex);
       auto frame_it = m_frameCache.begin();
@@ -320,23 +334,10 @@ public:
         more_frames = false;
       }
     }
-    std::cout << "Thread " << i << " got out of processing incomplete blocks" << std::endl;
-
 
     // Synchronize threads before exiting
-    {
-      std::unique_lock<std::mutex> lock(m_thread_synchronization_mutex);
-      --m_finished_threads;
-      std::cout << "Synchronize thread " << m_finished_threads << std::endl;
-      if (m_finished_threads.load() == 0) {
-        m_release_threads_cv.notify_all();
-      } else {
-        m_release_threads_cv.wait(
-          lock, [this]() { return m_finished_threads.load() == 0; });
-      }
-    }
+    barrier("Synchronized threads after processing incomplete frames.");
 
-    // std::cout << "Done thread " << i << std::endl;
     return;
   }
 
@@ -345,24 +346,37 @@ public:
    * functor.
    *
    * Sets up the thread pool, processes data from the NodeGroups, and processes
-   * it using the given functor. Returns a future<void> that resolves when all
+   * it using the given functor. Returns a future that resolves when all
    * processing is complete.
    *
    * @tparam Functor The type of the processing functor.
    * @param func The processing functor.
-   * @return A future<void> that resolves when all processing is complete.
+   * @return A future that resolves when all processing is complete.
    */
   template <typename Functor>
   std::future<void> readAll(Functor& func)
   {
     m_num_msgs_counter.store(0);
     m_pool = std::make_unique<ThreadPool>(m_threads);
-    std::cout << "m_scan_number_to_num_msgs "
+    std::cout << "Number of expected frames on reader: "
               << m_scan_number_to_num_msgs[m_current_scan_number] << std::endl;
 
     // Create worker threads
     for (int i = 0; i < m_threads; i++) {
       m_futures.emplace_back(m_pool->enqueue([this, &func, i]() {
+        // Set thread affinity for the current thread
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+
+        // Round robin to all cores
+        CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
+        pthread_t current_thread = pthread_self();
+        int ret =
+          pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+        if (ret != 0) {
+          std::cerr << "Error setting thread affinity: " << ret << std::endl;
+          return;
+        }
         process_frames(func, *m_pull_data_sockets[i], i);
       }));
     }

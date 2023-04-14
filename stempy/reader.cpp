@@ -46,6 +46,13 @@ Header::Header(Dimensions2D frameDimensions_, uint32_t imageNumInBlock_,
   this->imageNumbers = imageNumbers_;
 }
 
+/**
+ * @brief Construct a Header from a HeaderZMQ struct.
+ *
+ * Creates a stempy::Header from messages sent over ZMQ sockets. Used in
+ * reader_zmq.cpp.
+ *
+ */
 Header::Header(const HeaderZMQ& header_zmq)
 {
   imagesInBlock = 1;
