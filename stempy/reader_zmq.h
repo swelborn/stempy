@@ -37,6 +37,7 @@ private:
   std::vector<std::vector<std::string>> m_pull_data_addrs;
   uint8_t m_version;
   std::atomic<size_t> m_num_msgs_counter{ 0 };
+  std::mutex m_thread_synchronization_mutex;
   std::condition_variable m_release_threads_cv;
   std::atomic<int> m_finished_threads{ 0 };
 
@@ -148,12 +149,35 @@ public:
       return;
     }
 
+    // std::unique_lock<std::mutex> pullSocketLock(m_pull_data_context_mutex);
+    // int group_index = i % m_pull_data_contexts.size();
+    // int socket_index = (i / m_pull_data_contexts.size()) %
+    //                    m_pull_data_contexts[group_index].size();
+
+    // Create a new pull data socket and assign it to the appropriate index
+    // m_pull_data_sockets[i] = std::make_unique<zmq::socket_t>(
+    //   (*m_pull_data_contexts[group_index][socket_index]),
+    //   zmq::socket_type::pull);
+    // (*m_pull_data_sockets[i])
+    //   .connect(m_pull_data_addrs[group_index][socket_index]);
+
+    // zmq::socket_t pull_socket(
+    //   (*m_pull_data_contexts[group_index][socket_index]),
+    //   zmq::socket_type::pull);
+    // pull_socket.set(zmq::sockopt::immediate, 1);
+
+    // pull_socket.connect(m_pull_data_addrs[group_index][socket_index]);
+    // // std::cout << "Thread " << i << " connected to: "
+    // //           << m_pull_data_addrs[group_index][socket_index]
+    // //           << "\nSocket idx: " << socket_index
+    // //           << "\nGroup idx: " << group_index << std::endl;
+    // pullSocketLock.unlock();
+
     // Main loop for processing frames
     while (true) {
       // Check if all messages have been processed
       if (m_num_msgs_counter >=
           m_scan_number_to_num_msgs[m_current_scan_number]) {
-        std::cout << "inside break " << std::endl;
         break;
       }
 
@@ -231,10 +255,16 @@ public:
       }
     }
 
+    if (i == 0)
+    {
+      std::cout << "Done receiving data." << std::endl;
+    }
+
     // Synchronize threads before entering the while loop
     {
-      std::unique_lock<std::mutex> lock(m_cacheMutex);
+      std::unique_lock<std::mutex> lock(m_thread_synchronization_mutex);
       ++m_finished_threads;
+      std::cout << "Synchronize thread " << m_finished_threads << std::endl;
       if (m_finished_threads.load() == m_threads) {
         m_release_threads_cv.notify_all();
       } else {
@@ -275,6 +305,7 @@ public:
 
     // Process incomplete blocks
     bool more_frames = true;
+    std::cout << "Thread " << i << "processing incomplete blocks" << std::endl;
     while (more_frames) {
       std::unique_lock<std::mutex> cacheLock(m_cacheMutex);
       auto frame_it = m_frameCache.begin();
@@ -289,11 +320,14 @@ public:
         more_frames = false;
       }
     }
+    std::cout << "Thread " << i << " got out of processing incomplete blocks" << std::endl;
+
 
     // Synchronize threads before exiting
     {
-      std::unique_lock<std::mutex> lock(m_cacheMutex);
+      std::unique_lock<std::mutex> lock(m_thread_synchronization_mutex);
       --m_finished_threads;
+      std::cout << "Synchronize thread " << m_finished_threads << std::endl;
       if (m_finished_threads.load() == 0) {
         m_release_threads_cv.notify_all();
       } else {
@@ -302,7 +336,7 @@ public:
       }
     }
 
-    std::cout << "Done thread " << i << std::endl;
+    // std::cout << "Done thread " << i << std::endl;
     return;
   }
 
@@ -323,7 +357,6 @@ public:
   {
     m_num_msgs_counter.store(0);
     m_pool = std::make_unique<ThreadPool>(m_threads);
-    std::cout << "Creating worker threads." << std::endl;
     std::cout << "m_scan_number_to_num_msgs "
               << m_scan_number_to_num_msgs[m_current_scan_number] << std::endl;
 
@@ -338,10 +371,8 @@ public:
     auto complete = std::async(std::launch::async, [this]() {
       for (auto& future : this->m_futures) {
         future.get();
-        std::cout << "Got a future from readAll" << std::endl;
       }
     });
-    std::cout << "About to return complete" << std::endl;
     return complete;
   }
 };

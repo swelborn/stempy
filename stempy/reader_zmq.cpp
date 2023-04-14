@@ -65,22 +65,24 @@ void ReaderZMQ::setup_sockets()
   // Bind the frame info pull socket to the frame info address
   (*m_pull_frame_info_socket).bind("inproc://frame_info");
 
-  // Resize the pull data sockets vector
-  m_pull_data_sockets.resize(m_threads);
+  // Initialize the pull data sockets vector
+  m_pull_data_sockets = std::vector<std::unique_ptr<zmq::socket_t>>(m_threads);
+
   // Loop through all the threads
   for (unsigned int i = 0; i < m_threads; i++) {
     // Calculate the group and socket indices
     int group_index = i % m_pull_data_contexts.size();
     int socket_index = (i / m_pull_data_contexts.size()) %
                        m_pull_data_contexts[group_index].size();
-    // Create a new pull data socket and connect it to the appropriate address
-    m_pull_data_sockets.push_back(std::make_unique<zmq::socket_t>(
+    // Create a new pull data socket and assign it to the appropriate index
+    m_pull_data_sockets[i] = std::make_unique<zmq::socket_t>(
       (*m_pull_data_contexts[group_index][socket_index]),
-      zmq::socket_type::pull));
+      zmq::socket_type::pull);
     (*m_pull_data_sockets[i])
       .connect(m_pull_data_addrs[group_index][socket_index]);
   }
 }
+
 
 // Read the header information from the ZMQ message and return a Header object
 Header ReaderZMQ::readHeader(zmq::message_t& header_msg)
