@@ -162,7 +162,9 @@ public:
   template <typename Functor>
   void process_frames(Functor& func, zmq::socket_t& pull_socket, int i)
   {
-    // Create a single-threaded pool for inner processing
+    // Create a single-threaded pool for processing the frames.
+    // I noticed that messages were being dropped when I did not have this extra
+    // pool...
     std::unique_ptr<ThreadPool> inner_pool = std::make_unique<ThreadPool>(1);
     std::vector<std::pair<int, std::future<void>>> inner_futures;
 
