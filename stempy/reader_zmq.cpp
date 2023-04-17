@@ -12,7 +12,8 @@ ReaderZMQ::ReaderZMQ(
   zmq::context_t* pull_frame_info_context, uint8_t version, int threads)
   : SectorStreamThreadedReader(version, threads),
     m_pull_frame_info_context(pull_frame_info_context),
-    m_pull_data_contexts(pull_data_contexts), m_version(version)
+    m_pull_data_contexts(pull_data_contexts), m_version(version),
+    m_generation_barrier(threads)
 {
   setup_pull_data_addrs();
   setup_sockets();

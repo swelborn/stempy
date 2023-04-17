@@ -14,6 +14,46 @@
 
 namespace stempy {
 
+//TODO: DOCUMENT AND REMOVE MUTEXES
+class GenerationBarrier {
+public:
+  GenerationBarrier(unsigned int num_threads)
+      : m_num_threads(num_threads), m_count(0), m_generation(0) {}
+
+  /**
+   * @brief Implements a barrier synchronization primitive for multithreading.
+   *
+   * This function is called by multiple threads to ensure that all threads
+   * reach a certain point in their execution before any of them proceed.
+   *
+   * When the last thread arrives at the barrier, the barrier count is reset
+   * and the generation is incremented. Thus, if we continue to use this barrier in the code,
+   * there is no worry of a race condition. 
+   */
+  void barrier(std::string msg) {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    unsigned int current_generation = m_generation;
+
+    m_count++;
+    if (m_count == m_num_threads) {
+      std::cout << msg << std::endl;
+      m_count = 0;
+      m_generation++;
+      m_cv.notify_all();
+    } else {
+      m_cv.wait(lock, [this, current_generation] { return m_generation > current_generation; });
+    }
+  }
+
+private:
+  const unsigned int m_num_threads;
+  unsigned int m_count;
+  unsigned int m_generation;
+  std::mutex m_mutex;
+  std::condition_variable m_cv;
+};
+
+
 /**
  * @brief ReaderZMQ class for multi-threaded frame processing from NodeGroups.
  *
@@ -28,6 +68,7 @@ public:
   std::map<unsigned int, unsigned int> m_scan_number_to_num_msgs;
   unsigned int m_current_scan_number = 0;
   std::mutex m_pull_data_context_mutex;
+  GenerationBarrier m_generation_barrier;
 
 private:
   std::vector<std::vector<std::shared_ptr<zmq::context_t>>>&
@@ -115,32 +156,6 @@ public:
    * Updates the m_scan_number_to_num_msgs map with the received data.
    */
   void pull_frame_info();
-
-  /**
-   * @brief Implements a barrier synchronization primitive for multithreading.
-   *
-   * This function is called by multiple threads to ensure that all threads
-   * reach a certain point in their execution before any of them proceed.
-   *
-   * When the last thread arrives at the barrier, the barrier count is reset
-   * and all waiting threads are notified to continue.
-   *
-   * NOTE: copied from 4dstem repo.
-   */
-  void barrier(std::string msg = "")
-  {
-    std::unique_lock<std::mutex> lock(m_thread_synchronization_mutex);
-    m_finished_threads++;
-
-    if (m_finished_threads == m_threads) {
-      std::cout << msg << std::endl;
-      m_finished_threads = 0; // Reset the count for the next barrier
-      m_release_threads_cv.notify_all();
-    } else {
-      m_release_threads_cv.wait(lock,
-                                [this] { return m_finished_threads == 0; });
-    }
-  }
 
   /**
    * @brief Processes frames sent by NodeGroups using the given functor.
@@ -285,7 +300,7 @@ public:
     }
 
     // Synchronize threads before entering the while loop
-    barrier("Synchronized threads after receiving data.");
+    m_generation_barrier.barrier("Synchronized threads after receiving data.");
 
     // Check if all inner futures are ready
     // TODO: this is likely not necessary, could probably be done by a
@@ -338,7 +353,7 @@ public:
     }
 
     // Synchronize threads before exiting
-    barrier("Synchronized threads after processing incomplete frames.");
+    m_generation_barrier.barrier("Synchronized threads after processing incomplete frames.");
 
     return;
   }
