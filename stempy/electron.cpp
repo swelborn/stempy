@@ -764,7 +764,6 @@ ElectronCountedData electronCount(Reader* reader,
 
   // Now tell our workers to proceed
   electronCounting = true;
-  std::cout << "We are counting. " << std::endl;
   lock.unlock();
   sampleCondition.notify_all();
 
@@ -794,21 +793,15 @@ ElectronCountedData electronCount(Reader* reader,
     auto& b = sampleBlocks[i];
     countExtraBlock(b);
   }
-  std::cout << "Done counting extras. " << std::endl;
-
   // Count the incomplete blocks
   for (size_t i = 0; i < incompleteBlocks.size(); i++) {
     auto& b = incompleteBlocks[i];
     countExtraBlock(b);
   }
-  std::cout << "Done counting incomplete. " << std::endl;
-
+  
   // Make sure all threads are finished before returning the result
-  std::cout << "Waiting the threads to finish." << std::endl;
   done.wait();
-  std::cout << "Closing thread pool." << std::endl;
   reader->reset_m_pool();
-  std::cout << "Closed thread pool." << std::endl;
 
 #ifdef USE_MPI
   std::cout << "Gathering events." << std::endl;
@@ -818,15 +811,14 @@ ElectronCountedData electronCount(Reader* reader,
 
   // Find the maximum number of frames in a position, and make sure all
   // scan positions have this number of frames.
-  std::cout << "Finding max number of frames in a position." << std::endl;
   size_t maxNumFrames = 0;
   for (size_t i = 0; i < events.size(); ++i) {
     if (events[i].size() > maxNumFrames) {
       maxNumFrames = events[i].size();
     }
   }
+  std::cout << "Max number of frames per position: " << maxNumFrames << std::endl;
 
-  std::cout << "Making sure they are all the same size." << std::endl;
   // Now make sure they are all the same size
   for (size_t i = 0; i < events.size(); ++i) {
     events[i].resize(maxNumFrames);

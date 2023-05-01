@@ -183,36 +183,6 @@ public:
     std::unique_ptr<ThreadPool> inner_pool = std::make_unique<ThreadPool>(1);
     std::vector<std::pair<int, std::future<void>>> inner_futures;
 
-    // TODO: remove this
-    // This was used to create pull sockets in each thread. I thought it was a
-    // bottleneck, but I don't think that was the case. Leaving here for now,
-    // just in case.
-
-    // std::unique_lock<std::mutex>
-    // pullSocketLock(m_pull_data_context_mutex); int group_index = i %
-    // m_pull_data_contexts.size(); int socket_index = (i /
-    // m_pull_data_contexts.size()) %
-    //                    m_pull_data_contexts[group_index].size();
-
-    // Create a new pull data socket and assign it to the appropriate index
-    // m_pull_data_sockets[i] = std::make_unique<zmq::socket_t>(
-    //   (*m_pull_data_contexts[group_index][socket_index]),
-    //   zmq::socket_type::pull);
-    // (*m_pull_data_sockets[i])
-    //   .connect(m_pull_data_addrs[group_index][socket_index]);
-
-    // zmq::socket_t pull_socket(
-    //   (*m_pull_data_contexts[group_index][socket_index]),
-    //   zmq::socket_type::pull);
-    // pull_socket.set(zmq::sockopt::immediate, 1);
-
-    // pull_socket.connect(m_pull_data_addrs[group_index][socket_index]);
-    // // std::cout << "Thread " << i << " connected to: "
-    // //           << m_pull_data_addrs[group_index][socket_index]
-    // //           << "\nSocket idx: " << socket_index
-    // //           << "\nGroup idx: " << group_index << std::endl;
-    // pullSocketLock.unlock();
-
     // Main loop for processing frames
     while (true) {
       // Check if all messages have been processed
@@ -316,7 +286,7 @@ public:
         int thread_id = std::get<0>(inner_futures[j]);
         std::future<void>& future = std::get<1>(inner_futures[j]);
         std::future_status status =
-          future.wait_for(std::chrono::milliseconds(100));
+          future.wait_for(std::chrono::milliseconds(10));
 
         if (status == std::future_status::ready) {
           future.get();
@@ -325,8 +295,8 @@ public:
           }
         } else {
           all_futures_ready = false; // At least one future is not ready
-          std::cout << "Thread " << thread_id << " future " << (j + 1) << "of "
-                    << inner_futures.size() << " is not ready" << std::endl;
+          // std::cout << "Thread " << thread_id << " future " << (j + 1) << "of "
+          //           << inner_futures.size() << " is not ready" << std::endl;
           break;
         }
       }
