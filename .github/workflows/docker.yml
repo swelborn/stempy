@@ -5,6 +5,7 @@ on:
     branches:
       # - "master"
       - "new-docker-gha"
+      - "stempy-python-fix"
   pull_request:
     branches:
       - "master"
