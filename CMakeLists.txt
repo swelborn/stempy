@@ -44,6 +44,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 set(_libs Threads::Threads)
 
 option(stempy_ENABLE_MPI "Build with MPI" OFF)
+option(stempy_ENABLE_ZMQ "Build with ZMQ" OFF)
 if (stempy_ENABLE_MPI)
   find_package(MPI REQUIRED)
   list(APPEND _libs MPI::MPI_C)
@@ -58,8 +59,22 @@ if (stempy_ENABLE_MPI)
 
   find_package(BigMPI REQUIRED)
   list(APPEND _libs bigmpi::bigmpi)
+  if (stempy_ENABLE_ZMQ)
+    find_package(ZeroMQ REQUIRED)
+    message(STATUS "ZeroMQ_FOUND: ${ZeroMQ_FOUND}")
+    find_package(cppzmq REQUIRED)
+    find_package(msgpack-cxx REQUIRED)
+    include_directories(
+      ${ZeroMQ_INCLUDE_DIR} ${cppzmq_INCLUDE_DIR} ${msgpack-cxx_INCLUDE_DIR}
+    )
+    list(APPEND _src stempy/reader_zmq.cpp)
+    list(APPEND _libs libzmq)
+    list(APPEND _libs msgpack-cxx)
+    list(APPEND _libs cppzmq)
+  endif()
 endif()
 set(USE_MPI ${MPI_FOUND})
+set(ENABLE_ZMQ ${ZeroMQ_FOUND})
 
 set(_vtkm_src
   stempy/image.cpp

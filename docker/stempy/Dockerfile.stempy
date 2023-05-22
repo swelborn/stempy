@@ -8,6 +8,7 @@ ARG IPYKERNEL
 ARG MPI_TAG
 ARG MPI
 ARG RELEASE_OR_DEBUG
+ARG ZMQ
 
 WORKDIR /source
 
@@ -30,6 +31,7 @@ RUN mamba env update -n base -f environment.yml                                 
   cmake -DCMAKE_BUILD_TYPE:STRING=${RELEASE_OR_DEBUG} \
   -Dstempy_ENABLE_VTKm:BOOL=OFF \
   -Dstempy_ENABLE_MPI:BOOL=${MPI} \
+  -Dstempy_ENABLE_ZMQ:BOOL=${ZMQ} \
   -DBIGMPI_INCLUDE_DIR:PATH=/usr/local/include \
   -DBIGMPI_LIBRARY:PATH=/usr/local/lib/libbigmpi.a \
   /source/stempy .                                                                          && \

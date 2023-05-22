@@ -4,5 +4,6 @@
 #cmakedefine VTKm
 #cmakedefine USE_MPI
 #cmakedefine ENABLE_HDF5
+#cmakedefine ENABLE_ZMQ
 
 #endif /* CONFIG_H_ */

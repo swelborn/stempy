@@ -13,6 +13,10 @@
 #include <vtkm/worklet/WorkletPointNeighborhood.h>
 #endif
 
+#ifdef ENABLE_ZMQ
+#include "reader_zmq.h"
+#endif // ENABLE_ZMQ
+
 #include <sstream>
 #include <stdexcept>
 
@@ -873,5 +877,11 @@ template ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
 template ElectronCountedData electronCount(
   SectorStreamMultiPassThreadedReader* reader,
   const ElectronCountOptions& options);
+
+#ifdef ENABLE_ZMQ
+// ZMQ reader
+template ElectronCountedData electronCount(ReaderZMQ* reader,
+                                           const ElectronCountOptions& options);
+#endif // ENABLE_ZMQ
 
 } // end namespace stempy

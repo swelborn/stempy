@@ -6,6 +6,7 @@ on:
       # - "master"
       - "new-docker-gha"
       - "stempy-python-fix"
+      - "zmq-streaming-PR"
   pull_request:
     branches:
       - "master"
@@ -17,13 +18,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.10']
         mpi: ['ON', 'OFF']
-        base-image: ['ubuntu:bionic', 'ubuntu:jammy']
+        base-image: ['ubuntu:jammy']
         ipykernel: ['', 'ipykernel']
         dev: ['', 'dev']
+        zmq: ['ON', 'OFF']
         exclude:
           - python-version: '3.10'
+            ipykernel: 'ipykernel'
+          - zmq: 'OFF'
+            mpi: 'ON'
+          - zmq: 'OFF'
             ipykernel: 'ipykernel'
  
     steps:
@@ -72,10 +78,14 @@ jobs:
           BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION##*:}
           echo "BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION}" >> $GITHUB_ENV
           echo "BASE_TARGET=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "mpi"; else echo "base"; fi)" >> $GITHUB_ENV
+          echo "BASE_TARGET=$(if [[ "${{ matrix.zmq }}" == "ON" ]]; then echo "zmq"; fi)" >> $GITHUB_ENV
 
           # Image tagging
           MPI_TAG=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "-mpi"; else echo ""; fi)
           echo "MPI_TAG=${MPI_TAG}" >> $GITHUB_ENV
+
+          ZMQ_TAG=$(if [[ "${{ matrix.zmq }}" == "ON" ]]; then echo "-zmq"; else echo ""; fi)
+          echo "ZMQ_TAG=${ZMQ_TAG}" >> $GITHUB_ENV
 
           DEV_TAG=$(if [[ "${{ matrix.dev }}" == "dev" ]]; then echo "-dev"; else echo ""; fi)
           echo "DEV_TAG=$(if [[ "${{ matrix.dev }}" == "dev" ]]; then echo "-dev"; else echo ""; fi)" >> $GITHUB_ENV
@@ -87,10 +97,10 @@ jobs:
           IPYKERNEL_TAG=$(if [[ "${{ matrix.ipykernel }}" == "ipykernel" ]]; then echo "-ipykernel"; else echo ""; fi)
           echo "IPYKERNEL_TAG=${IPYKERNEL_TAG}" >> $GITHUB_ENV
 
-          BASE_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-base${DEV_TAG}
+          BASE_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${ZMQ_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-base${DEV_TAG}
           echo "BASE_TAG=${BASE_TAG}" >> $GITHUB_ENV
 
-          TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-${COMMIT}${DEV_TAG}
+          TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}${ZMQ_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-${COMMIT}${DEV_TAG}
           echo "TAG=${TAG}" >> $GITHUB_ENV          
       -
         name: Build/push Dockerfile.base
@@ -106,6 +116,7 @@ jobs:
                       MINICONDA_URL=${{ env.MINICONDA_URL }}
                       BASE_IMAGE=${{ matrix.base-image }}
                       DEV=${{ matrix.dev }}
+                      ZMQ=${{ matrix.zmq }}
           tags: ${{ env.BASE_TAG }}
           target: ${{ env.BASE_TARGET }}
           cache-to: type=gha, mode=max
@@ -124,6 +135,7 @@ jobs:
                       MPI=${{ matrix.mpi }}
                       MPI_TAG=${{ env.MPI_TAG }}
                       IPYKERNEL=${{ matrix.ipykernel }}
+                      ZMQ=${{ matrix.zmq}}
           tags: ${{ env.TAG }}
           target: build
           cache-to: type=gha, mode=max

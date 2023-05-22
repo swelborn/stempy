@@ -86,6 +86,7 @@ RUN mkdir -p /build/stempy                                                      
   -Dstempy_ENABLE_VTKm:BOOL=ON \
   -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
   -Dstempy_ENABLE_MPI:BOOL=${MPI} \
+  -Dstempy_ENABLE_ZMQ:BOOL=OFF \
   -DBIGMPI_INCLUDE_DIR:PATH=/usr/local/include \
   -DBIGMPI_LIBRARY:PATH=/usr/local/lib/libbigmpi.a \
   /source/stempy . && \

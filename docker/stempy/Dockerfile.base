@@ -9,20 +9,29 @@ WORKDIR /build
 COPY ./docker/stempy/apt-packages-common.txt /tmp/apt-packages-common.txt
 # Install dev packages if DEV is set
 COPY ./docker/stempy/apt-packages-dev.txt /tmp/apt-packages-dev.txt
+# Install zmq packages if ZMQ is set
+COPY ./docker/stempy/apt-packages-zmq.txt /tmp/apt-packages-zmq.txt
+
 ARG DEV
+ARG ZMQ
 RUN if [ "$DEV" = "dev" ]; then \
         cat /tmp/apt-packages-common.txt /tmp/apt-packages-dev.txt > /tmp/apt-packages.txt; \
     else \
         cp /tmp/apt-packages-common.txt /tmp/apt-packages.txt; \
-    fi                                                  && \
-    apt-get update                                      && \
-    apt-get upgrade --yes                               && \
-    apt-get install --yes                                  \
-    $(cat /tmp/apt-packages-common.txt)                 && \
-    apt-get clean all                                   && \
+    fi                                                                              && \
+    if [ "$ZMQ" = "zmq" ]; then \
+        cat /tmp/apt-packages.txt /tmp/apt-packages-zmq.txt > /tmp/apt-packages.txt.tmp && \
+        mv /tmp/apt-packages.txt.tmp /tmp/apt-packages.txt; \
+    fi                                                                              && \
+    apt-get update                                                                  && \
+    apt-get upgrade --yes                                                           && \
+    apt-get install --yes \
+    $(cat /tmp/apt-packages.txt)                                                    && \
+    apt-get clean all                                                               && \
     rm -rf /var/lib/apt/lists/*                             
 
 # Install miniconda
+# Have to reinstall libarchive from conda-forge, and cmake for ZMQ build steps
 ARG PYTHON_VERSION
 ARG MINICONDA_URL
 ARG SHA256SUM
@@ -38,7 +47,7 @@ RUN wget "${MINICONDA_URL}" -O miniconda.sh -q                      && \
     find /opt/conda/ -follow -type f -name '*.a' -delete            && \
     find /opt/conda/ -follow -type f -name '*.js.map' -delete       && \
     conda clean -afy                                                && \
-    conda install python=${PYTHON_VERSION} libarchive \
+    conda install python=${PYTHON_VERSION} libarchive cmake \ 
         --force-reinstall -y -c conda-forge                         && \
     conda update conda -y -c conda-forge                            && \
     conda update --all -y -c conda-forge                            && \
@@ -70,3 +79,21 @@ RUN cd /build && wget https://github.com/jeffhammond/BigMPI/archive/refs/heads/m
   ./autogen.sh && ./configure --with-pic && make -j4 && make install && make clean && rm /build/master.tar.gz
 
 RUN /sbin/ldconfig
+
+FROM mpi as zmq
+
+RUN git clone https://github.com/zeromq/libzmq.git && \
+    cd libzmq && mkdir build && cd build && \
+    cmake .. -DBUILD_SHARED=ON -DBUILD_STATIC=ON -DENABLE_DRAFTS=ON && \
+    cmake --build . -j4 && \
+    cmake --install . && cd ../../ && rm -rf libzmq
+
+RUN git clone https://github.com/zeromq/cppzmq.git && \
+    cd cppzmq && mkdir build && cd build && \
+    cmake .. -DENABLE_DRAFTS=ON && \
+    cmake --build . -j4 && \
+    cmake --install . && cd ../../ && rm -rf cppzmq
+
+RUN git clone https://github.com/msgpack/msgpack-c.git && \
+    cd msgpack-c && git checkout cpp_master && cmake . && \
+    cmake --build . --target install && cd ../ && rm -rf msgpack-c
