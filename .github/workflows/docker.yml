@@ -29,6 +29,8 @@ jobs:
             ipykernel: 'ipykernel'
           - zmq: 'OFF'
             mpi: 'ON'
+          - zmq: 'ON'
+            mpi: 'OFF'
           - zmq: 'OFF'
             ipykernel: 'ipykernel'
  
