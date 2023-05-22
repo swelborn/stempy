@@ -77,8 +77,14 @@ jobs:
           BASE_IMAGE_VERSION="${{ matrix.base-image }}"
           BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION##*:}
           echo "BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION}" >> $GITHUB_ENV
-          echo "BASE_TARGET=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "mpi"; else echo "base"; fi)" >> $GITHUB_ENV
-          echo "BASE_TARGET=$(if [[ "${{ matrix.zmq }}" == "ON" ]]; then echo "zmq"; fi)" >> $GITHUB_ENV
+          BASE_TARGET="base"
+          if [[ "${{ matrix.mpi }}" == "ON" ]]; then 
+            BASE_TARGET="mpi"; 
+          fi
+          if [[ "${{ matrix.zmq }}" == "ON" ]]; then 
+            BASE_TARGET="zmq"; 
+          fi
+          echo "BASE_TARGET=${BASE_TARGET}" >> $GITHUB_ENV
 
           # Image tagging
           MPI_TAG=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "-mpi"; else echo ""; fi)
