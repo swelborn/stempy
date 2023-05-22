@@ -19,7 +19,7 @@ RUN if [ "$DEV" = "dev" ]; then \
     else \
         cp /tmp/apt-packages-common.txt /tmp/apt-packages.txt; \
     fi                                                                              && \
-    if [ "$ZMQ" = "zmq" ]; then \
+    if [ "$ZMQ" = "ON" ]; then \
         cat /tmp/apt-packages.txt /tmp/apt-packages-zmq.txt > /tmp/apt-packages.txt.tmp && \
         mv /tmp/apt-packages.txt.tmp /tmp/apt-packages.txt; \
     fi                                                                              && \
