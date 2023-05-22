@@ -27,8 +27,6 @@ jobs:
         exclude:
           - python-version: '3.10'
             ipykernel: 'ipykernel'
-          - zmq: 'OFF'
-            mpi: 'ON'
           - zmq: 'ON'
             mpi: 'OFF'
           - zmq: 'OFF'
