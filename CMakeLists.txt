@@ -61,7 +61,7 @@ if (stempy_ENABLE_MPI)
     find_package(ZeroMQ REQUIRED)
     find_package(cppzmq REQUIRED)
     find_package(msgpack-cxx REQUIRED)
-    
+
     list(APPEND _libs libzmq)
     list(APPEND _libs msgpack-cxx)
     list(APPEND _libs cppzmq)
@@ -180,6 +180,10 @@ install(TARGETS stem
 install(FILES stempy/reader.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
 install(FILES stempy/image.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
 install(FILES stempy/electron.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+install(FILES stempy/mask.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+install(FILES stempy/atomic_primitives.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+install(FILES stempy/electronthresholds.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+install(FILES stempy/streamview.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
 install(FILES thirdparty/ThreadPool/ThreadPool.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/thirdparty/ThreadPool)
 
 if (stempy_ENABLE_ZMQ)
