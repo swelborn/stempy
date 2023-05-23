@@ -59,16 +59,16 @@ if (stempy_ENABLE_MPI)
   list(APPEND _libs bigmpi::bigmpi)
   if (stempy_ENABLE_ZMQ)
     find_package(ZeroMQ REQUIRED)
-    message(STATUS "ZeroMQ_FOUND: ${ZeroMQ_FOUND}")
     find_package(cppzmq REQUIRED)
     find_package(msgpack-cxx REQUIRED)
-    include_directories(
-      ${ZeroMQ_INCLUDE_DIR} ${cppzmq_INCLUDE_DIR} ${msgpack-cxx_INCLUDE_DIR}
-    )
-    list(APPEND _src stempy/reader_zmq.cpp)
+    
     list(APPEND _libs libzmq)
     list(APPEND _libs msgpack-cxx)
     list(APPEND _libs cppzmq)
+
+    include_directories(
+      SYSTEM ${ZeroMQ_INCLUDE_DIR} ${msgpack-cxx_INCLUDE_DIR} ${cppzmq_INCLUDE_DIR}
+    )
   endif()
 endif()
 set(USE_MPI ${MPI_FOUND})
@@ -91,6 +91,11 @@ if (stempy_ENABLE_MPI)
   list(APPEND _src
     stempy/reader_mpi.cpp
   )
+  if (stempy_ENABLE_ZMQ)
+    list(APPEND _src 
+      stempy/reader_zmq.cpp
+    )
+  endif()
 endif()
 
 list(APPEND _libs pybind11::headers)
@@ -176,6 +181,11 @@ install(FILES stempy/reader.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
 install(FILES stempy/image.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
 install(FILES stempy/electron.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
 install(FILES thirdparty/ThreadPool/ThreadPool.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/thirdparty/ThreadPool)
+
+if (stempy_ENABLE_ZMQ)
+  install(FILES stempy/reader_zmq.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+endif()
+
 
 set(VTKm ${VTKm_FOUND})
 set(ENABLE_HDF5 ${HDF5_FOUND})
