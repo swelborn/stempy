@@ -35,7 +35,8 @@ RUN mamba env update -n base -f environment.yml                                 
   -DBIGMPI_INCLUDE_DIR:PATH=/usr/local/include \
   -DBIGMPI_LIBRARY:PATH=/usr/local/lib/libbigmpi.a \
   /source/stempy .                                                                          && \
-  make -j 16                                                                                && \
+  cmake --build .                                                                           && \
+  cmake --install .                                                                         && \
   cp -r -L /build/stempy/lib/stempy \                                                   
   /opt/conda/lib/python${PYTHON_VERSION}/site-packages                                      && \
   rm -rf /source/stempy                                                                     && \
