@@ -22,11 +22,11 @@ RUN if [ "${IPYKERNEL}" = "ipykernel" ]; then \
     rm temp.yml; \
     fi || true && \
     sed -i "s/python=.*/python=${PYTHON_VERSION}/" environment.yml && \
-    cat environment.yml
+    cat environment.yml && \
+    mamba env update -n base -f environment.yml
 
 COPY . /source/stempy/
-RUN mamba env update -n base -f environment.yml                                             && \
-  mkdir -p /build/stempy                                                                    && \
+RUN mkdir -p /build/stempy                                                                  && \
   cd /build/stempy                                                                          && \
   cmake -DCMAKE_BUILD_TYPE:STRING=${RELEASE_OR_DEBUG} \
   -Dstempy_ENABLE_VTKm:BOOL=OFF \
