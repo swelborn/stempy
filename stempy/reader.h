@@ -368,6 +368,7 @@ public:
 
   template <typename Functor>
   std::future<void> readAll(Functor& f);
+  void reset_m_pool() { m_pool.reset(); }
 
 protected:
   // The number of threads to use

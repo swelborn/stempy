@@ -795,6 +795,7 @@ ElectronCountedData electronCount(Reader* reader,
 
   // Make sure all threads are finished before returning the result
   done.wait();
+  reader->reset_m_pool();
 
 #ifdef USE_MPI
   gatherEvents(worldSize, rank, events);
