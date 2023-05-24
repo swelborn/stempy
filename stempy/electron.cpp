@@ -835,7 +835,7 @@ ElectronCountedData electronCount(Reader* reader,
   metadata.backgroundThresholdNSigma = threshold.backgroundThresholdNSigma;
   metadata.optimizedMean = threshold.optimizedMean;
   metadata.optimizedStdDev = threshold.optimizedStdDev;
-
+  positionMutexes.reset();
   return ret;
 }
 
