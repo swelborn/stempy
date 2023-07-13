@@ -34,7 +34,7 @@ PYBIND11_MODULE(_io, m)
                                                       descriptor */
         3,                                         /* Number of dimensions */
         { b.header.imagesInBlock, b.header.frameDimensions.second,
-          b.header.frameDimensions.first }, /* Buffer dimensions */
+          b.header.frameDimensions.first },        /* Buffer dimensions */
         { sizeof(uint16_t) * b.header.frameDimensions.second *
             b.header.frameDimensions.first,
           sizeof(uint16_t) * b.header.frameDimensions.second, sizeof(uint16_t) }
@@ -55,7 +55,7 @@ PYBIND11_MODULE(_io, m)
                                                       descriptor */
         3,                                         /* Number of dimensions */
         { b.header.imagesInBlock, b.header.frameDimensions.second,
-          b.header.frameDimensions.first }, /* Buffer dimensions */
+          b.header.frameDimensions.first },        /* Buffer dimensions */
         { sizeof(uint16_t) * b.header.frameDimensions.second *
             b.header.frameDimensions.first,
           sizeof(uint16_t) * b.header.frameDimensions.second, sizeof(uint16_t) }
@@ -127,7 +127,9 @@ PYBIND11_MODULE(_io, m)
          py::arg("threads") = 0)
     .def(py::init<const std::vector<std::string>&, int>(), py::arg("files"),
          py::arg("threads") = 0)
-    .def("create_scan_map", &SectorStreamMultiPassThreadedReader::createScanMap)
-    .def("get_block_from_image_number",
-         &SectorStreamMultiPassThreadedReader::getBlockFromMap);
+    .def("_load_frames", &SectorStreamMultiPassThreadedReader::loadFrames)
+    .def("_num_frames_per_scan",
+         &SectorStreamMultiPassThreadedReader::numFramesPerScan)
+    .def("_scan_dimensions",
+         &SectorStreamMultiPassThreadedReader::scanDimensions);
 }

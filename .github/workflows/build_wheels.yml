@@ -45,18 +45,18 @@
 #       matrix:
 #         os: [ubuntu-20.04, macos-latest, windows-2019]
 
-#     steps:
-#       - uses: actions/checkout@v2
-#         with:
-#           # Grab the whole history so that setuptools-scm can see the tags and
-#           # give it a correct version even on non-tag push.
-#           fetch-depth: 0
-#           submodules: recursive
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # Grab the whole history so that setuptools-scm can see the tags and
+          # give it a correct version even on non-tag push.
+          fetch-depth: 0
+          submodules: recursive
 
-  #     - uses: actions/setup-python@v2
-  #       name: Install Python
-  #       with:
-  #         python-version: '3.7'
+      - uses: actions/setup-python@v4
+        name: Install Python
+        with:
+          python-version: '3.7'
 
   #     - name: Install dependencies
   #       run: . .github/scripts/install.sh
@@ -64,21 +64,21 @@
   #     - name: Build wheels
   #       run:  cibuildwheel --output-dir wheelhouse
 
-  #     - uses: actions/upload-artifact@v2
-  #       with:
-  #         path: ./wheelhouse/*.whl
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
 
-  # upload_pypi:
-  #   needs: build_wheels
-  #   name: Upload wheels to PyPI
-  #   runs-on: ubuntu-latest
-  #   # upload to PyPI on every tag push
-  #   if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
-  #   steps:
-  #     - uses: actions/download-artifact@v2
-  #       with:
-  #         name: artifact
-  #         path: dist
+  upload_pypi:
+    needs: build_wheels
+    name: Upload wheels to PyPI
+    runs-on: ubuntu-latest
+    # upload to PyPI on every tag push
+    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: dist
 
   #     - uses: pypa/gh-action-pypi-publish@master
   #       with:
