@@ -5,6 +5,7 @@ on:
     branches:
       - 'master'
       - 'gha-final'
+      - 'test-improve-get-scan-path'
   pull_request:
     branches:
       - 'master'
