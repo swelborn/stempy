@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'master'
+      - 'zmq-streaming-PR'
   pull_request:
     branches:
       - 'master'
