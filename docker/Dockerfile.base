@@ -44,20 +44,4 @@ RUN cd /build && wget https://github.com/jeffhammond/BigMPI/archive/refs/heads/m
     tar zxvf master.tar.gz  && cd /build/BigMPI-master && \
     ./autogen.sh && ./configure --with-pic && make -j4 && make install && make clean && rm /build/master.tar.gz
 
-RUN git clone https://github.com/zeromq/libzmq.git && \
-    cd libzmq && mkdir build && cd build && \
-    cmake .. -DBUILD_SHARED=ON -DBUILD_STATIC=ON -DENABLE_DRAFTS=ON && \
-    cmake --build . -j4 && \
-    cmake --install . && cd ../../ && rm -rf libzmq
-
-RUN git clone https://github.com/zeromq/cppzmq.git && \
-    cd cppzmq && mkdir build && cd build && \
-    cmake .. -DENABLE_DRAFTS=ON && \
-    cmake --build . -j4 && \
-    cmake --install . && cd ../../ && rm -rf cppzmq
-
-RUN git clone https://github.com/msgpack/msgpack-c.git && \
-    cd msgpack-c && git checkout cpp_master && cmake . && \
-    cmake --build . --target install && cd ../ && rm -rf msgpack-c
-
 RUN /sbin/ldconfig
