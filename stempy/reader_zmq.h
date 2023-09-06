@@ -197,7 +197,7 @@ public:
 
       // Receive header message
       zmq::message_t header_msg;
-      bool header_received =
+      auto header_received =
         pull_socket.recv(header_msg, zmq::recv_flags::dontwait);
 
       // Process header and corresponding data message
@@ -245,7 +245,7 @@ public:
 
         // Receive data message and process sector data
         zmq::message_t data_msg;
-        pull_socket.recv(data_msg, zmq::recv_flags::none);
+        auto data_recv = pull_socket.recv(data_msg, zmq::recv_flags::none);
         readSectorDataVersion5(data_msg, frame.block, sector);
 
         // Check if the frame is complete
