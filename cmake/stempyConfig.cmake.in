@@ -8,6 +8,3 @@ find_package(Python3 CONFIG QUIET COMPONENTS Development)
 if(NOT Python3_FOUND)
   find_package(Python3 REQUIRED COMPONENTS Development)
 endif()
-
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/stempy")
-include_directories("${CMAKE_CURRENT_LIST_DIR}")
