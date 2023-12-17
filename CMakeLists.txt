@@ -29,10 +29,17 @@ include_directories(
   SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/least-squares-cpp/include
 )
 
-find_package(Eigen3 REQUIRED)
-include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
+find_package(Eigen3 CONFIG QUIET)
+if(NOT Eigen3_FOUND)
+  find_package(Eigen3 REQUIRED)
+  include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
+endif()
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(Python3 CONFIG QUIET COMPONENTS Interpreter Development.Module)
+if(NOT Python3_FOUND)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+endif()
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 set(PYBIND11_PYTHON_VERSION "3" CACHE STRING "")
 set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
@@ -85,7 +92,10 @@ list(APPEND _libs Python3::Module)
 
 option(stempy_ENABLE_HDF5 "Build with HDF5" ON)
 if (stempy_ENABLE_HDF5)
-  find_package(HDF5 REQUIRED COMPONENTS C)
+  find_package(HDF5 CONFIG QUIET COMPONENTS C)
+  if (NOT HDF5_FOUND)
+    find_package(HDF5 REQUIRED COMPONENTS C)
+  endif()
   list(APPEND _src h5cpp/h5readwrite.cpp)
   list(APPEND _libs hdf5::hdf5)
 endif()

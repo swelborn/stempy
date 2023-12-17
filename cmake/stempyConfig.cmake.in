@@ -4,7 +4,10 @@ include("${CMAKE_CURRENT_LIST_DIR}/stempyTargets.cmake")
 
 check_required_components(stempy)
 
-find_package(Python3 REQUIRED COMPONENTS Development)
+find_package(Python3 CONFIG QUIET COMPONENTS Development)
+if(NOT Python3_FOUND)
+  find_package(Python3 REQUIRED COMPONENTS Development)
+endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/stempy")
 include_directories("${CMAKE_CURRENT_LIST_DIR}")
