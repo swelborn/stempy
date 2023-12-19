@@ -852,6 +852,110 @@ bool SectorStreamThreadedReader::nextStream(StreamQueueEntry& streamQueueEntry)
   return true;
 }
 
+
+std::future<void> SectorStreamThreadedReader::readAll(std::function<void(Block&)> func) {
+  m_pool = std::make_unique<ThreadPool>(m_threads);
+
+  auto streamsIterator = m_streams.begin();
+
+  while (streamsIterator != m_streams.end()) {
+    auto& s = *streamsIterator;
+    m_streamQueue.push(StreamQueueEntry(s.stream.get(), s.sector));
+    streamsIterator++;
+  }
+
+  // Create worker threads
+  for (int i = 0; i < m_threads; i++) {
+    m_futures.emplace_back(m_pool->enqueue([this, &func]() {
+
+      while (!m_streams.empty()) {
+        // Get the next stream to read from
+        StreamQueueEntry streamQueueEntry;
+
+        if (!nextStream(streamQueueEntry)) {
+          continue;
+        }
+        auto& stream = streamQueueEntry.stream;
+        auto sector = streamQueueEntry.sector;
+
+        // First read the header
+        auto header = readHeader(*stream);
+
+        std::vector<Block> blocks;
+        for (unsigned j = 0; j < header.imagesInBlock; j++) {
+          auto pos = header.imageNumbers[j];
+          auto frameNumber = header.frameNumber;
+
+          std::unique_lock<std::mutex> cacheLock(m_cacheMutex);
+          auto& frame = m_frameCache[frameNumber];
+          cacheLock.unlock();
+
+          // Do we need to allocate the frame, use a double check lock
+          if (std::atomic_load(&frame.block.data) == nullptr) {
+            std::unique_lock<std::mutex> lock(frame.mutex);
+            // Check again now we have the mutex
+            if (std::atomic_load(&frame.block.data) == nullptr) {
+              frame.block.header.version = version();
+              frame.block.header.scanNumber = header.scanNumber;
+              frame.block.header.scanDimensions = header.scanDimensions;
+              frame.block.header.imagesInBlock = 1;
+              frame.block.header.imageNumbers.push_back(pos);
+              frame.block.header.frameNumber = frameNumber;
+              frame.block.header.frameDimensions = FRAME_DIMENSIONS;
+              std::shared_ptr<uint16_t> data;
+
+              data.reset(
+                new uint16_t[frame.block.header.frameDimensions.first *
+                             frame.block.header.frameDimensions.second],
+                std::default_delete<uint16_t[]>());
+              std::fill(data.get(),
+                        data.get() +
+                          frame.block.header.frameDimensions.first *
+                            frame.block.header.frameDimensions.second,
+                        0);
+              std::atomic_store(&frame.block.data, data);
+            }
+          }
+
+          readSectorData(*stream, frame.block, sector);
+
+          // Now now have the complete frame
+          if (++frame.sectorCount == 4) {
+            cacheLock.lock();
+            blocks.emplace_back(frame.block);
+            m_frameCache.erase(frameNumber);
+            cacheLock.unlock();
+          }
+        }
+
+        // Return the stream to the queue so other threads can read from it.
+        // It is important that we do this before doing the processing to prevent
+        // starvation of one of the streams, we need to make sure they are all
+        // read evenly.
+        {
+          std::unique_lock<std::mutex> queueLock(m_queueMutex);
+          streamQueueEntry.readCount++;
+          m_streamQueue.push(streamQueueEntry);
+        }
+
+        // Finally call the function on any completed frames
+        for (auto& b : blocks) {
+          func(b);
+        }
+      }
+    }));
+  }
+
+  // Return a future that is resolved once the processing is complete
+  auto complete = std::async(std::launch::deferred, [this]() {
+    for (auto& future : this->m_futures) {
+      future.get();
+    }
+  });
+
+  return complete;
+}
+
 SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
   const std::string& path, int threads)
   : SectorStreamThreadedReader(path, 5, threads)
