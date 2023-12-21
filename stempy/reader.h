@@ -350,7 +350,7 @@ protected:
   // The futures associated with the worker threads
   std::vector<std::future<void>> m_futures;
 
-protected:
+private:
   // Protect access to frame cache
   std::mutex m_cacheMutex;
 
