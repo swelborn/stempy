@@ -18,3 +18,4 @@ make
 software-properties-common
 wget
 zlib1g-dev
+libboost-all-dev

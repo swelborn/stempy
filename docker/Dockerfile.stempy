@@ -12,11 +12,28 @@ COPY . /source/stempy/
 
 RUN pip install -r /source/stempy/requirements.txt cmake
 
+RUN git clone https://github.com/zeromq/libzmq.git && \
+    cd libzmq && mkdir build && cd build && \
+    cmake .. -DBUILD_SHARED=ON -DBUILD_STATIC=ON -DENABLE_DRAFTS=ON && \
+    cmake --build . -j4 && \
+    cmake --install . && cd ../../ && rm -rf libzmq
+
+RUN git clone https://github.com/zeromq/cppzmq.git && \
+    cd cppzmq && mkdir build && cd build && \
+    cmake .. -DENABLE_DRAFTS=ON && \
+    cmake --build . -j4 && \
+    cmake --install . && cd ../../ && rm -rf cppzmq
+
+RUN git clone https://github.com/msgpack/msgpack-c.git && \
+    cd msgpack-c && git checkout cpp_master && cmake . && \
+    cmake --build . --target install && cd ../ && rm -rf msgpack-c
+
 RUN mkdir -p /build/stempy                                                                    && \
     cd /build/stempy                                                                          && \
     cmake -DCMAKE_BUILD_TYPE:STRING=${RELEASE_OR_DEBUG} \
     -Dstempy_ENABLE_VTKm:BOOL=OFF \
     -Dstempy_ENABLE_MPI:BOOL=${MPI} \
+    -Dstempy_ENABLE_ZMQ:BOOL=ON \
     -DBIGMPI_INCLUDE_DIR:PATH=/usr/local/include \
     -DBIGMPI_LIBRARY:PATH=/usr/local/lib/libbigmpi.a \
     /source/stempy .                                                                          && \
