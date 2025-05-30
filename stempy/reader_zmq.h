@@ -13,9 +13,6 @@
 
 #ifdef __linux__
 #include <sched.h>
-#elif defined(__APPLE__)
-#include <mach/thread_policy.h>
-#include <mach/thread_act.h>
 #endif
 
 namespace stempy {
@@ -360,20 +357,22 @@ public:
     // Create worker threads
     for (int i = 0; i < m_threads; i++) {
       m_futures.emplace_back(m_pool->enqueue([this, &func, i]() {
-        // Set thread affinity for the current thread
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
+      // Set thread affinity for the current thread (Linux only)
+#ifdef __linux__
+      cpu_set_t cpuset;
+      CPU_ZERO(&cpuset);
 
-        // Round robin to all cores
-        CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
-        pthread_t current_thread = pthread_self();
-        int ret =
-          pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
-        if (ret != 0) {
-          std::cerr << "Error setting thread affinity: " << ret << std::endl;
-          return;
-        }
-        process_frames(func, *m_pull_data_sockets[i], i);
+      // Round robin to all cores
+      CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
+      pthread_t current_thread = pthread_self();
+      int ret =
+        pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+      if (ret != 0) {
+        std::cerr << "Error setting thread affinity: " << ret << std::endl;
+        return;
+      }
+#endif
+      process_frames(func, *m_pull_data_sockets[i], i);
       }));
     }
 
