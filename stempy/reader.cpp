@@ -46,6 +46,23 @@ Header::Header(Dimensions2D frameDimensions_, uint32_t imageNumInBlock_,
   this->imageNumbers = imageNumbers_;
 }
 
+#ifdef ENABLE_ZMQ
+Header::Header(const HeaderZMQ& header_zmq)
+{
+  imagesInBlock = 1;
+  frameDimensions = SECTOR_DIMENSIONS_VERSION_5;
+  version = 5;
+  scanNumber = header_zmq.scan_number;
+  frameNumber = header_zmq.frame_number;
+  scanDimensions.first = header_zmq.nSTEM_positions_per_row_m1;
+  scanDimensions.second = header_zmq.nSTEM_rows_m1;
+  sector = header_zmq.module;
+  auto scanXposition = header_zmq.STEM_x_position_in_row;
+  auto scanYposition = header_zmq.STEM_row_in_scan;
+  imageNumbers.push_back(scanYposition * scanDimensions.first + scanXposition);
+}
+#endif
+
 Block::Block(const Header& h)
   : header(h), data(new uint16_t[h.frameDimensions.first *
                                  h.frameDimensions.second * h.imagesInBlock],
@@ -313,6 +330,21 @@ SectorStreamReader::SectorStreamReader(const vector<string>& files,
 
   openFiles();
   m_streamsIterator = m_streams.begin();
+}
+
+SectorStreamReader::SectorStreamReader(uint8_t version) : m_version(version)
+{
+  // Validate version
+  switch (m_version) {
+    case 4:
+    case 5:
+      break;
+    default:
+      std::ostringstream ss;
+      ss << "Unsupported version: ";
+      ss << m_version;
+      throw invalid_argument(ss.str());
+  }
 }
 
 SectorStreamReader::~SectorStreamReader()
@@ -777,6 +809,13 @@ SectorStreamThreadedReader::SectorStreamThreadedReader(const std::string& path,
 SectorStreamThreadedReader::SectorStreamThreadedReader(
   const std::vector<std::string>& files, uint8_t version, int threads)
   : SectorStreamReader(files, version), m_threads(threads)
+{
+  initNumberOfThreads();
+}
+
+SectorStreamThreadedReader::SectorStreamThreadedReader(uint8_t version,
+                                                       int threads)
+  : SectorStreamReader(version), m_threads(threads)
 {
   initNumberOfThreads();
 }

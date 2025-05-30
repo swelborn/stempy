@@ -26,6 +26,10 @@ class H5ReadWrite;
 }
 #endif // ENABLE_HDF5
 
+#ifdef ENABLE_ZMQ
+#include <msgpack.hpp>
+#endif // ENABLE_ZMQ
+
 namespace stempy {
 
 // Convention is (x, y)
@@ -46,13 +50,33 @@ struct EofException : public std::exception
   const char* what () const throw () { return "EOF Exception"; }
 };
 
-struct Header {
+#ifdef ENABLE_ZMQ
+struct HeaderZMQ
+{
+  unsigned int scan_number = 0;
+  unsigned int frame_number = 0;
+  unsigned short nSTEM_positions_per_row_m1 = 0;
+  unsigned short nSTEM_rows_m1 = 0;
+  unsigned short STEM_x_position_in_row = 0;
+  unsigned short STEM_row_in_scan = 0;
+  unsigned short thread_id = 0;
+  unsigned short module = 0;
+
+  MSGPACK_DEFINE(scan_number, frame_number, nSTEM_positions_per_row_m1,
+                 nSTEM_rows_m1, STEM_x_position_in_row, STEM_row_in_scan,
+                 thread_id, module);
+};
+#endif // ENABLE_ZMQ
+
+struct Header
+{
   Dimensions2D scanDimensions = { 0, 0 };
   Dimensions2D frameDimensions = { 0, 0 };
   uint32_t imagesInBlock = 0, version = 0, timestamp = 0;
   uint32_t frameNumber = 0, scanNumber = 0;
   std::vector<uint32_t> imageNumbers;
   std::vector<bool> complete;
+  uint32_t sector;
 
 #ifdef USE_MPI
   template <class Archive>
@@ -65,6 +89,11 @@ struct Header {
   Header& operator=(Header&& header) noexcept = default;
   Header(Dimensions2D frameDimensions, uint32_t imageNumInBlock,
          Dimensions2D scanDimensions, std::vector<uint32_t>& imageNumbers);
+
+#ifdef ENABLE_ZMQ
+  // Constructor to take HeaderZMQ
+  Header(const HeaderZMQ& header_zmq);
+#endif // ENABLE_ZMQ
 };
 
 struct Block {
@@ -197,6 +226,7 @@ public:
   SectorStreamReader(const std::string& path, uint8_t version = 5);
   SectorStreamReader(const std::vector<std::string>& files,
                      uint8_t version = 5);
+  SectorStreamReader(uint8_t version = 5);
   ~SectorStreamReader();
 
   Block read();
@@ -334,9 +364,11 @@ public:
                              int threads = 0);
   SectorStreamThreadedReader(const std::vector<std::string>& files,
                              uint8_t version = 5, int threads = 0);
+  SectorStreamThreadedReader(uint8_t version = 5, int threads = 0);
 
   template <typename Functor>
   std::future<void> readAll(Functor& f);
+  void reset_m_pool() { m_pool.reset(); }
 
 protected:
   // The number of threads to use
@@ -348,7 +380,7 @@ protected:
   // The futures associated with the worker threads
   std::vector<std::future<void>> m_futures;
 
-private:
+protected:
   // Protect access to frame cache
   std::mutex m_cacheMutex;
 

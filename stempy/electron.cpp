@@ -13,6 +13,10 @@
 #include <vtkm/worklet/WorkletPointNeighborhood.h>
 #endif
 
+#ifdef ENABLE_ZMQ
+#include "reader_zmq.h"
+#endif // ENABLE_ZMQ
+
 #include <sstream>
 #include <stdexcept>
 
@@ -791,6 +795,7 @@ ElectronCountedData electronCount(Reader* reader,
 
   // Make sure all threads are finished before returning the result
   done.wait();
+  reader->reset_m_pool();
 
 #ifdef USE_MPI
   gatherEvents(worldSize, rank, events);
@@ -831,7 +836,7 @@ ElectronCountedData electronCount(Reader* reader,
   metadata.backgroundThresholdNSigma = threshold.backgroundThresholdNSigma;
   metadata.optimizedMean = threshold.optimizedMean;
   metadata.optimizedStdDev = threshold.optimizedStdDev;
-
+  positionMutexes.reset();
   return ret;
 }
 
@@ -873,5 +878,10 @@ template ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
 template ElectronCountedData electronCount(
   SectorStreamMultiPassThreadedReader* reader,
   const ElectronCountOptions& options);
+
+#ifdef ENABLE_ZMQ
+template ElectronCountedData electronCount(ReaderZMQ* reader,
+                                           const ElectronCountOptions& options);
+#endif 
 
 } // end namespace stempy
