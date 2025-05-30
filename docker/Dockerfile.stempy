@@ -10,7 +10,7 @@ ARG RELEASE_OR_DEBUG
 
 COPY . /source/stempy/
 
-RUN pip install -r /source/stempy/requirements.txt cmake
+RUN pip install -r /source/stempy/requirements.txt "cmake<4"
 
 RUN git clone https://github.com/zeromq/libzmq.git && \
     cd libzmq && mkdir build && cd build && \
