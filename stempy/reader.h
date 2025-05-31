@@ -27,6 +27,7 @@ class H5ReadWrite;
 #endif // ENABLE_HDF5
 
 #ifdef ENABLE_ZMQ
+#define MSGPACK_DISABLE_LEGACY_NIL
 #include <msgpack.hpp>
 #endif // ENABLE_ZMQ
 
