@@ -31,14 +31,22 @@ include_directories(
 
 find_package(Eigen3 REQUIRED)
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
-add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
-set(PYBIND11_PYTHON_VERSION "3" CACHE STRING "")
-set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
-
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 set(_libs Threads::Threads Eigen3::Eigen)
+
+option(stempy_ENABLE_PYTHON "Build with Python support" ON)
+if(stempy_ENABLE_PYTHON)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
+  set(PYBIND11_PYTHON_VERSION "3" CACHE STRING "")
+  set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
+
+  list(APPEND _libs pybind11::headers)
+  # We have to link to Python3::Module since "pyreader.cpp" includes
+  # pybind11 and python header files.
+  list(APPEND _libs Python3::Module)
+endif()
 
 option(stempy_ENABLE_MPI "Build with MPI" OFF)
 option(stempy_ENABLE_ZMQ "Build with ZMQ" OFF)
@@ -96,11 +104,6 @@ if (stempy_ENABLE_MPI)
     )
   endif()
 endif()
-
-list(APPEND _libs pybind11::headers)
-# We have to link to Python3::Module since "pyreader.cpp" includes
-# pybind11 and python header files.
-list(APPEND _libs Python3::Module)
 
 option(stempy_ENABLE_HDF5 "Build with HDF5" ON)
 if (stempy_ENABLE_HDF5)
@@ -222,4 +225,8 @@ install(FILES
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stempy
 )
 
-add_subdirectory(python)
+if (stempy_ENABLE_PYTHON)
+  add_subdirectory(python)
+else()
+  message(STATUS "Python support is disabled. Not building Python module.")
+endif()
