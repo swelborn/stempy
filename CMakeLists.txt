@@ -71,7 +71,7 @@ if (stempy_ENABLE_MPI)
   endif()
 endif()
 set(USE_MPI ${MPI_FOUND})
-set(ENABLE_ZMQ ${ZeroMQ_FOUND})
+set(ENABLE_ZMQ ${stempy_ENABLE_ZMQ})
 
 set(_vtkm_src
   stempy/image.cpp
@@ -198,7 +198,7 @@ endif()
 
 
 set(VTKm ${VTKm_FOUND})
-set(ENABLE_HDF5 ${HDF5_FOUND})
+set(ENABLE_HDF5 ${stempy_ENABLE_HDF5})
 configure_file("${stempy_CMAKE_DIR}/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 
