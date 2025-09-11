@@ -50,6 +50,7 @@ void ReaderZMQ::setup_sockets()
 {
   m_pull_frame_info_socket = std::make_unique<zmq::socket_t>(
     *m_pull_frame_info_context, zmq::socket_type::pull);
+  m_pull_frame_info_socket->set(zmq::sockopt::rcvtimeo, 1000);
   (*m_pull_frame_info_socket).bind("inproc://frame_info");
   m_pull_data_sockets = std::vector<std::unique_ptr<zmq::socket_t>>(m_threads);
 
