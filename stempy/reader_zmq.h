@@ -366,20 +366,20 @@ public:
       m_futures.emplace_back(m_pool->enqueue([this, &func, i]() {
       // Set thread affinity for the current thread (Linux only)
 #ifdef __linux__
-      cpu_set_t cpuset;
-      CPU_ZERO(&cpuset);
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
 
-      // Round robin to all cores
-      CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
-      pthread_t current_thread = pthread_self();
-      int ret =
-        pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
-      if (ret != 0) {
-        std::cerr << "Error setting thread affinity: " << ret << std::endl;
-        return;
-      }
+        // Round robin to all cores
+        CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
+        pthread_t current_thread = pthread_self();
+        int ret =
+          pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+        if (ret != 0) {
+          std::cerr << "Error setting thread affinity: " << ret << std::endl;
+          return;
+        }
 #endif
-      process_frames(func, *m_pull_data_sockets[i], i);
+        process_frames(func, *m_pull_data_sockets[i], i);
       }));
     }
 
