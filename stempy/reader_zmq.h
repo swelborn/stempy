@@ -205,12 +205,19 @@ public:
 
       // Process header and corresponding data message
       if (header_received) {
+        auto header = readHeader(header_msg);
+        if (header.scanNumber != m_current_scan_number) {
+          std::cout << "WARNING: MESSAGE RECEIVED FROM INCORRECT SCAN! "
+                    << "Expected scan number " << m_current_scan_number
+                    << ", but got " << header.scanNumber << ". Skipping."
+                    << std::endl;
+          continue;
+        }
         m_num_msgs_counter++;
         if (m_num_msgs_counter % 10000 == 0) {
           std::cout << "num msgs counter " << m_num_msgs_counter << std::endl;
         }
 
-        auto header = readHeader(header_msg);
         auto sector = header.sector;
         auto pos = header.imageNumbers[0];
         auto frameNumber = header.frameNumber;
