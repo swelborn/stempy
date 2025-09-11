@@ -205,12 +205,19 @@ public:
 
       // Process header and corresponding data message
       if (header_received) {
+        auto header = readHeader(header_msg);
+        if (header.scanNumber != m_current_scan_number) {
+          std::cout << "WARNING: MESSAGE RECEIVED FROM INCORRECT SCAN! "
+                    << "Expected scan number " << m_current_scan_number
+                    << ", but got " << header.scanNumber << ". Skipping."
+                    << std::endl;
+          continue;
+        }
         m_num_msgs_counter++;
         if (m_num_msgs_counter % 10000 == 0) {
           std::cout << "num msgs counter " << m_num_msgs_counter << std::endl;
         }
 
-        auto header = readHeader(header_msg);
         auto sector = header.sector;
         auto pos = header.imageNumbers[0];
         auto frameNumber = header.frameNumber;
@@ -359,20 +366,20 @@ public:
       m_futures.emplace_back(m_pool->enqueue([this, &func, i]() {
       // Set thread affinity for the current thread (Linux only)
 #ifdef __linux__
-      cpu_set_t cpuset;
-      CPU_ZERO(&cpuset);
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
 
-      // Round robin to all cores
-      CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
-      pthread_t current_thread = pthread_self();
-      int ret =
-        pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
-      if (ret != 0) {
-        std::cerr << "Error setting thread affinity: " << ret << std::endl;
-        return;
-      }
+        // Round robin to all cores
+        CPU_SET(i % std::thread::hardware_concurrency(), &cpuset);
+        pthread_t current_thread = pthread_self();
+        int ret =
+          pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+        if (ret != 0) {
+          std::cerr << "Error setting thread affinity: " << ret << std::endl;
+          return;
+        }
 #endif
-      process_frames(func, *m_pull_data_sockets[i], i);
+        process_frames(func, *m_pull_data_sockets[i], i);
       }));
     }
 
