@@ -36,7 +36,10 @@ void ReaderZMQ::pull_frame_info()
 {
   std::map<unsigned int, unsigned int> scan_num_to_frame_count;
   zmq::message_t msg;
-  (*m_pull_frame_info_socket).recv(msg, zmq::recv_flags::none);
+  auto res = (*m_pull_frame_info_socket).recv(msg, zmq::recv_flags::none);
+  if (!res) {
+    throw zmq::error_t(EAGAIN);
+  }
   msgpack::object_handle oh =
     msgpack::unpack(static_cast<const char*>(msg.data()), msg.size());
   oh.get().convert(scan_num_to_frame_count);
